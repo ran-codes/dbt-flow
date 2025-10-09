@@ -13,6 +13,8 @@ A lightweight, browser-based tool for visualizing dbt project lineage and collab
 ### 1. **Lineage Visualization** (Release 1)
 Parse and visualize existing dbt projects as interactive DAGs.
 
+- use this docs site: https://salurbal-mort-datwarehouse-v0-0-3.netlify.app/#!/overview?g_v=1
+
 **Capabilities:**
 - URL input: Fetch `manifest.json` from dbt docs sites
 - File upload: Fallback for CORS-blocked or local manifests
