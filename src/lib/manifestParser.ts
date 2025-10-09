@@ -36,11 +36,12 @@ export type ParsedManifest = {
  * @returns Parsed manifest data
  */
 export async function fetchManifest(baseUrl: string): Promise<ParsedManifest> {
-  try {
-    // Remove trailing slash if present
-    const cleanUrl = baseUrl.replace(/\/$/, '');
-    const manifestUrl = `${cleanUrl}/manifest.json`;
+  // Remove trailing slash if present
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+  const manifestUrl = `${cleanUrl}/manifest.json`;
 
+  // Try direct fetch first
+  try {
     const response = await fetch(manifestUrl, {
       mode: 'cors',
       headers: {
@@ -55,8 +56,27 @@ export async function fetchManifest(baseUrl: string): Promise<ParsedManifest> {
     const manifest: DbtManifest = await response.json();
     return parseManifest(manifest);
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('CORS error: Unable to fetch manifest. Try uploading the file instead.');
+    // If CORS error, try with proxy
+    if (error instanceof TypeError || (error instanceof Error && error.message.includes('CORS'))) {
+      console.log('Direct fetch failed, attempting with CORS proxy...');
+
+      try {
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(manifestUrl)}`;
+        const response = await fetch(proxyUrl, {
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch via proxy: ${response.status} ${response.statusText}`);
+        }
+
+        const manifest: DbtManifest = await response.json();
+        return parseManifest(manifest);
+      } catch (proxyError) {
+        throw new Error('Unable to fetch manifest. CORS is blocking direct access and proxy failed. Try uploading the file instead.');
+      }
     }
     throw error;
   }
