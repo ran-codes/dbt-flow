@@ -19,9 +19,17 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const manifest = await fetchManifest(url);
-      const { nodes, edges } = buildGraph(manifest.nodes);
-      setGraph(nodes, edges, manifest);
+      // TODO: Remove this dev override before release - uses local test.json
+      const response = await fetch('/test.json');
+      if (!response.ok) throw new Error('Failed to load test manifest');
+      const manifest = await response.json();
+      const parsed = {
+        nodes: [...Object.values(manifest.nodes || {}), ...Object.values(manifest.sources || {})],
+        projectName: manifest.metadata?.project_name || 'Test Project',
+        generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
+      };
+      const { nodes, edges } = buildGraph(parsed.nodes);
+      setGraph(nodes, edges, parsed);
       router.push('/visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse manifest');
