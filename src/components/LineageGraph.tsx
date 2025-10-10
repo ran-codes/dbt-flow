@@ -266,6 +266,7 @@ function LineageGraphInner() {
 
   const styledEdges = visibleEdges.map((edge) => ({
     ...edge,
+    type: 'default', // Use curved bezier edges
     style: {
       ...edge.style,
       stroke: highlightedEdges.has(edge.id) ? '#3b82f6' : '#64748b',
@@ -303,7 +304,7 @@ function LineageGraphInner() {
         minZoom={0.1}
         maxZoom={4}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'default',
           animated: false,
         }}
       >
