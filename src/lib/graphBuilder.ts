@@ -16,7 +16,7 @@ export type GraphNode = Node<{
 export type GraphEdge = Edge;
 
 const NODE_WIDTH = 180;
-const NODE_HEIGHT = 60;
+const NODE_HEIGHT = 80; // Increased height to add padding around nodes for edge clearance
 
 /**
  * Color scheme for different node types
@@ -110,6 +110,10 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
             target: node.unique_id,
             type: 'smoothstep',
             animated: false,
+            markerEnd: {
+              type: 'arrowclosed',
+              color: '#64748b',
+            },
             style: { stroke: '#64748b', strokeWidth: 2 },
           });
         }
@@ -137,11 +141,12 @@ export function getLayoutedElements(
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({
     rankdir: 'LR',  // Left to right
-    nodesep: 50,    // Horizontal spacing between nodes (dbt-docs: 50)
-    ranksep: 200,   // Vertical spacing between ranks (dbt-docs: 200)
-    edgesep: 30,    // Horizontal spacing between edges (dbt-docs: 30)
-    marginx: 20,
-    marginy: 20,
+    nodesep: 40,    // Vertical spacing between nodes (reduced - nodes closer together)
+    ranksep: 150,   // Horizontal spacing between ranks
+    edgesep: 10,    // Spacing between edges
+    marginx: 50,
+    marginy: 50,
+    ranker: 'network-simplex',  // Better algorithm for avoiding overlaps
   });
 
   // Add nodes to graph

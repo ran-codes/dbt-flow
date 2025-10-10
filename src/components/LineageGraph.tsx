@@ -33,8 +33,9 @@ function LineageGraphInner() {
   const [highlightedEdges, setHighlightedEdges] = useState<Set<string>>(new Set());
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
-  const { fitView } = useReactFlow();
+  const { fitView, getZoom } = useReactFlow();
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
@@ -46,9 +47,9 @@ function LineageGraphInner() {
       setFilteredNodes(layouted.nodes);
       setFilteredEdges(filteredE);
 
-      // Fit view on initial load
+      // Fit view on initial load (max 100% zoom)
       setTimeout(() => {
-        fitView({ padding: 0.2, duration: 300 });
+        fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
         hasAutoRelayoutRef.current = true;
       }, 100);
     } else {
@@ -64,9 +65,9 @@ function LineageGraphInner() {
     const layouted = getLayoutedElements(filteredNodes as any[], filteredEdges as any[]);
     setFilteredNodes(layouted.nodes);
 
-    // Fit view after layout is applied
+    // Fit view after layout is applied (max 100% zoom)
     setTimeout(() => {
-      fitView({ padding: 0.2, duration: 300 });
+      fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
     }, 0);
   }, [filteredNodes, filteredEdges, fitView]);
 
@@ -126,11 +127,11 @@ function LineageGraphInner() {
       setFilteredNodes(layouted.nodes);
       setFilteredEdges(lineageEdges);
 
-      // Clear highlights and fit view
+      // Clear highlights and fit view (max 100% zoom)
       setHighlightedNodes(new Set());
       setHighlightedEdges(new Set());
       setTimeout(() => {
-        fitView({ padding: 0.2, duration: 300 });
+        fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
       }, 100);
     },
     [filteredNodes, filteredEdges, edges, fitView]
@@ -156,11 +157,11 @@ function LineageGraphInner() {
     setFilteredNodes(layouted.nodes);
     setFilteredEdges(filteredE);
 
-    // Clear highlights and fit view
+    // Clear highlights and fit view (max 100% zoom)
     setHighlightedNodes(new Set());
     setHighlightedEdges(new Set());
     setTimeout(() => {
-      fitView({ padding: 0.2, duration: 300 });
+      fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
     }, 100);
   }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView]);
 
@@ -184,6 +185,20 @@ function LineageGraphInner() {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
+
+  // Track zoom level
+  useEffect(() => {
+    const updateZoom = () => {
+      const zoom = getZoom();
+      setZoomLevel(Math.round(zoom * 100));
+    };
+
+    // Update zoom on mount and on interval
+    updateZoom();
+    const interval = setInterval(updateZoom, 100);
+
+    return () => clearInterval(interval);
+  }, [getZoom]);
 
   if (!nodes.length) {
     return (
@@ -209,6 +224,10 @@ function LineageGraphInner() {
       stroke: highlightedEdges.has(edge.id) ? '#3b82f6' : '#64748b',
       strokeWidth: highlightedEdges.has(edge.id) ? 3 : 2,
       opacity: highlightedEdges.size === 0 || highlightedEdges.has(edge.id) ? 1 : 0.2,
+    },
+    markerEnd: {
+      type: 'arrowclosed',
+      color: highlightedEdges.has(edge.id) ? '#3b82f6' : '#64748b',
     },
     animated: highlightedEdges.has(edge.id),
   }));
@@ -391,6 +410,9 @@ function LineageGraphInner() {
           </span>
           <span className="text-gray-600">
             Edges: <span className="font-semibold text-gray-900">{filteredEdges.length}</span>
+          </span>
+          <span className="text-gray-600">
+            Zoom: <span className="font-semibold text-gray-900">{zoomLevel}%</span>
           </span>
           <button
             onClick={handleRelayout}
