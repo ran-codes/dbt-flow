@@ -26,20 +26,18 @@ body {
 }
 
 /* Remove React Flow's default node styling */
-.react-flow__node {
+.react-flow__node,
+.react-flow__node-default,
+.react-flow__node.default {
   padding: 0 !important;
   border: none !important;
   background: transparent !important;
   border-radius: 0 !important;
   width: auto !important;
   height: auto !important;
+  box-shadow: none !important;
 }
 
-.react-flow__node-default {
-  padding: 0 !important;
+.react-flow__node > div {
   border: none !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  width: auto !important;
-  height: auto !important;
 }

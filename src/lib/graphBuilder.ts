@@ -59,6 +59,11 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
       schema: node.schema,
       tags: node.tags,
     },
+    style: {
+      padding: 0,
+      border: 'none',
+      background: 'transparent',
+    },
   }));
 
   // Build edges
