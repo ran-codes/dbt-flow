@@ -51,10 +51,14 @@ export const useGraphStore = create<GraphStore>((set) => ({
 
   // Actions
   setGraph: (nodes, edges, manifest) => {
-    // Extract all unique inferred tags from nodes
+    // Extract all unique inferred tags from nodes, excluding 'base'
     const inferredTagSet = new Set<string>();
     nodes.forEach((node) => {
-      node.data.inferredTags?.forEach((tag) => inferredTagSet.add(tag));
+      node.data.inferredTags?.forEach((tag) => {
+        if (tag !== 'base') {
+          inferredTagSet.add(tag);
+        }
+      });
     });
 
     set({
@@ -62,7 +66,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       edges,
       projectName: manifest.projectName,
       generatedAt: manifest.generatedAt,
-      inferredTagFilters: inferredTagSet, // Initialize with all inferred tags
+      inferredTagFilters: inferredTagSet, // Initialize with all inferred tags except 'base'
     });
   },
 

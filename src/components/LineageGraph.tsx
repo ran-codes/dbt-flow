@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -25,14 +25,29 @@ function LineageGraphInner() {
   const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
+  const hasAutoRelayoutRef = useRef(false);
   const { fitView } = useReactFlow();
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
     const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, 'OR');
-    setFilteredNodes(filtered);
-    setFilteredEdges(filteredE);
-  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters]);
+
+    // Apply layout and set nodes
+    if (filtered.length > 0 && !hasAutoRelayoutRef.current) {
+      const layouted = getLayoutedElements(filtered as any[], filteredE as any[]);
+      setFilteredNodes(layouted.nodes);
+      setFilteredEdges(filteredE);
+
+      // Fit view on initial load
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 300 });
+        hasAutoRelayoutRef.current = true;
+      }, 100);
+    } else {
+      setFilteredNodes(filtered);
+      setFilteredEdges(filteredE);
+    }
+  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView]);
 
   // Relayout filtered nodes to position them closer together and fit view
   const handleRelayout = useCallback(() => {

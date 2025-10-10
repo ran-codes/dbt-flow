@@ -23,7 +23,7 @@ export default function FilterBar() {
   } = useGraphStore();
   const [isResourceExpanded, setIsResourceExpanded] = useState(false);
   const [isTagExpanded, setIsTagExpanded] = useState(false);
-  const [isInferredTagExpanded, setIsInferredTagExpanded] = useState(false);
+  const [isInferredTagExpanded, setIsInferredTagExpanded] = useState(true);
 
   // Extract all unique tags from nodes
   const allTags = useMemo(() => {
@@ -48,6 +48,50 @@ export default function FilterBar() {
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            {/* Inferred Layer Filter - Leftmost position, open by default */}
+            {allInferredTags.length > 0 && (
+              <>
+                <button
+                  onClick={() => setIsInferredTagExpanded(!isInferredTagExpanded)}
+                  className="flex items-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors text-sm font-semibold text-amber-800"
+                >
+                  <span>Inferred Layer</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${isInferredTagExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {isInferredTagExpanded && (
+                  <div className="flex items-center gap-3 max-w-2xl overflow-x-auto">
+                    {allInferredTags.map((tag) => (
+                      <label
+                        key={tag}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors whitespace-nowrap"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={inferredTagFilters.has(tag)}
+                          onChange={() => toggleInferredTag(tag)}
+                          className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-2 focus:ring-amber-500"
+                        />
+                        <span className="text-sm text-amber-800 font-medium">{tag}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
             {/* Resource Type Filter */}
             <button
               onClick={() => setIsResourceExpanded(!isResourceExpanded)}
@@ -153,50 +197,6 @@ export default function FilterBar() {
                           className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="text-sm text-slate-700">{tag}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Inferred Tags Filter */}
-            {allInferredTags.length > 0 && (
-              <>
-                <button
-                  onClick={() => setIsInferredTagExpanded(!isInferredTagExpanded)}
-                  className="flex items-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors text-sm font-semibold text-amber-800"
-                >
-                  <span>Inferred Layer</span>
-                  <svg
-                    className={`w-4 h-4 transition-transform ${isInferredTagExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                {isInferredTagExpanded && (
-                  <div className="flex items-center gap-3 max-w-2xl overflow-x-auto">
-                    {allInferredTags.map((tag) => (
-                      <label
-                        key={tag}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors whitespace-nowrap"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={inferredTagFilters.has(tag)}
-                          onChange={() => toggleInferredTag(tag)}
-                          className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-2 focus:ring-amber-500"
-                        />
-                        <span className="text-sm text-amber-800 font-medium">{tag}</span>
                       </label>
                     ))}
                   </div>
