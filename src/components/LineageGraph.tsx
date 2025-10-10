@@ -70,7 +70,7 @@ export default function LineageGraph() {
           position="top-left"
           pannable
           zoomable
-          nodeColor={(node: any) => getNodeColor(node.data?.type || 'default')}
+          nodeColor={(node: any) => getNodeColor(node.data?.type || 'default', node.data?.inferredTags)}
           maskColor="rgba(0, 0, 0, 0.2)"
         />
       </ReactFlow>

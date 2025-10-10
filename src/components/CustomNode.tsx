@@ -18,7 +18,7 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
           selected ? 'ring-2 ring-blue-400 ring-offset-2 shadow-xl' : 'shadow-md'
         }`}
         style={{
-          backgroundColor: getNodeColor(data.type),
+          backgroundColor: getNodeColor(data.type, data.inferredTags),
           border: '2px solid #1e293b',
           minWidth: '180px',
           maxWidth: '180px',

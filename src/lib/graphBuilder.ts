@@ -33,9 +33,24 @@ export const nodeColors: Record<string, string> = {
 };
 
 /**
- * Gets the color for a node based on its resource type
+ * Color scheme for inferred tags
  */
-export function getNodeColor(resourceType: string): string {
+export const inferredTagColors: Record<string, string> = {
+  int: '#8b5cf6',        // purple
+  mart: '#ec4899',       // pink
+  base: '#3b82f6',       // blue
+  default: '#6b7280',    // gray
+};
+
+/**
+ * Gets the color for a node based on its inferred tags (priority) or resource type
+ */
+export function getNodeColor(resourceType: string, inferredTags?: string[]): string {
+  // If node has inferred tags, use the first one for color
+  if (inferredTags && inferredTags.length > 0) {
+    return inferredTagColors[inferredTags[0]] || inferredTagColors.default;
+  }
+  // Otherwise, use resource type color
   return nodeColors[resourceType] || nodeColors.default;
 }
 
