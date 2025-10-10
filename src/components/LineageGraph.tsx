@@ -122,6 +122,22 @@ export default function LineageGraph() {
             </div>
           )}
 
+          {selectedNode.data.tags && selectedNode.data.tags.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Tags</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedNode.data.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-md font-medium"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedNode.data.sql && (
             <div className="mt-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">SQL</h4>
