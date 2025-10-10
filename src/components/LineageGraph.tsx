@@ -17,7 +17,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
-import { filterNodes, getNodeColor, getLayoutedElements } from '@/lib/graphBuilder';
+import { filterNodes, getNodeColor, getLayoutedElements, getAncestors, getDescendants } from '@/lib/graphBuilder';
 import FilterBar from './FilterBar';
 import CustomNode from './CustomNode';
 
@@ -29,6 +29,8 @@ function LineageGraphInner() {
   const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
+  const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
+  const [highlightedEdges, setHighlightedEdges] = useState<Set<string>>(new Set());
   const hasAutoRelayoutRef = useRef(false);
   const { fitView } = useReactFlow();
 
@@ -69,8 +71,24 @@ function LineageGraphInner() {
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
       setSelectedNode(node as any);
+
+      // Get all ancestors (upstream) and descendants (downstream)
+      const ancestors = getAncestors(node.id, filteredEdges);
+      const descendants = getDescendants(node.id, filteredEdges);
+
+      // Combine all related nodes
+      const allRelatedNodes = new Set([...ancestors, ...descendants]);
+      setHighlightedNodes(allRelatedNodes);
+
+      // Find all edges that connect the related nodes
+      const relatedEdges = new Set(
+        filteredEdges
+          .filter((edge) => allRelatedNodes.has(edge.source) && allRelatedNodes.has(edge.target))
+          .map((edge) => edge.id)
+      );
+      setHighlightedEdges(relatedEdges);
     },
-    [setSelectedNode]
+    [setSelectedNode, filteredEdges]
   );
 
   const onNodesChange = useCallback(
@@ -95,11 +113,31 @@ function LineageGraphInner() {
     );
   }
 
+  // Apply highlighting to nodes and edges
+  const styledNodes = filteredNodes.map((node) => ({
+    ...node,
+    style: {
+      ...node.style,
+      opacity: highlightedNodes.size === 0 || highlightedNodes.has(node.id) ? 1 : 0.2,
+    },
+  }));
+
+  const styledEdges = filteredEdges.map((edge) => ({
+    ...edge,
+    style: {
+      ...edge.style,
+      stroke: highlightedEdges.has(edge.id) ? '#3b82f6' : '#64748b',
+      strokeWidth: highlightedEdges.has(edge.id) ? 3 : 2,
+      opacity: highlightedEdges.size === 0 || highlightedEdges.has(edge.id) ? 1 : 0.2,
+    },
+    animated: highlightedEdges.has(edge.id),
+  }));
+
   return (
     <div className="w-full h-full">
       <ReactFlow
-        nodes={filteredNodes}
-        edges={filteredEdges}
+        nodes={styledNodes}
+        edges={styledEdges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
         onNodesChange={onNodesChange}

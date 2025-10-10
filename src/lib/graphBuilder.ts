@@ -137,8 +137,9 @@ export function getLayoutedElements(
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({
     rankdir: 'LR',  // Left to right
-    nodesep: 80,    // Horizontal spacing between nodes
-    ranksep: 150,   // Vertical spacing between ranks
+    nodesep: 50,    // Horizontal spacing between nodes (dbt-docs: 50)
+    ranksep: 200,   // Vertical spacing between ranks (dbt-docs: 200)
+    edgesep: 30,    // Horizontal spacing between edges (dbt-docs: 30)
     marginx: 20,
     marginy: 20,
   });
@@ -172,6 +173,48 @@ export function getLayoutedElements(
     nodes: layoutedNodes,
     edges,
   };
+}
+
+/**
+ * Finds all ancestor nodes (upstream dependencies) of a given node
+ */
+export function getAncestors(
+  nodeId: string,
+  edges: GraphEdge[],
+  visited: Set<string> = new Set()
+): Set<string> {
+  if (visited.has(nodeId)) return visited;
+  visited.add(nodeId);
+
+  // Find all edges that point TO this node (sources)
+  const parentEdges = edges.filter((edge) => edge.target === nodeId);
+
+  parentEdges.forEach((edge) => {
+    getAncestors(edge.source, edges, visited);
+  });
+
+  return visited;
+}
+
+/**
+ * Finds all descendant nodes (downstream dependencies) of a given node
+ */
+export function getDescendants(
+  nodeId: string,
+  edges: GraphEdge[],
+  visited: Set<string> = new Set()
+): Set<string> {
+  if (visited.has(nodeId)) return visited;
+  visited.add(nodeId);
+
+  // Find all edges that start FROM this node (targets)
+  const childEdges = edges.filter((edge) => edge.source === nodeId);
+
+  childEdges.forEach((edge) => {
+    getDescendants(edge.target, edges, visited);
+  });
+
+  return visited;
 }
 
 /**
