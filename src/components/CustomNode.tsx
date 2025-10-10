@@ -1,9 +1,11 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
 import type { GraphNode } from '@/lib/graphBuilder';
 import { getNodeColor } from '@/lib/graphBuilder';
 
 function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   return (
     <div className="relative">
       <Handle
@@ -23,11 +25,23 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
           minWidth: '180px',
           maxWidth: '180px',
         }}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
       >
         <div className="flex flex-col gap-1.5">
-          <div className="text-white font-semibold text-sm truncate" title={data.label}>
+          <div className="text-white font-semibold text-sm truncate">
             {data.label}
           </div>
+
+          {/* Tooltip for full name */}
+          {showTooltip && (
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none">
+              {data.label}
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                <div className="border-8 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+          )}
 
           {/* Inferred Tags (orange/amber) */}
           {data.inferredTags && data.inferredTags.length > 0 && (
