@@ -5,6 +5,8 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
+  ReactFlowProvider,
+  useReactFlow,
   type NodeMouseHandler,
   type Node,
   type Edge,
@@ -19,25 +21,31 @@ const nodeTypes = {
   default: CustomNode,
 };
 
-export default function LineageGraph() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode, setSelectedNode, selectedNode } = useGraphStore();
+function LineageGraphInner() {
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
+  const { fitView } = useReactFlow();
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
-    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode);
+    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, 'OR');
     setFilteredNodes(filtered);
     setFilteredEdges(filteredE);
-  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode]);
+  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters]);
 
-  // Relayout filtered nodes to position them closer together
+  // Relayout filtered nodes to position them closer together and fit view
   const handleRelayout = useCallback(() => {
     if (filteredNodes.length === 0) return;
 
     const layouted = getLayoutedElements(filteredNodes as any[], filteredEdges as any[]);
     setFilteredNodes(layouted.nodes);
-  }, [filteredNodes, filteredEdges]);
+
+    // Fit view after layout is applied
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    }, 0);
+  }, [filteredNodes, filteredEdges, fitView]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -193,5 +201,13 @@ export default function LineageGraph() {
       {/* Filter bar */}
       <FilterBar />
     </div>
+  );
+}
+
+export default function LineageGraph() {
+  return (
+    <ReactFlowProvider>
+      <LineageGraphInner />
+    </ReactFlowProvider>
   );
 }

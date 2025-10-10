@@ -50,13 +50,21 @@ export const useGraphStore = create<GraphStore>((set) => ({
   inferredTagFilterMode: 'OR', // Default: OR logic
 
   // Actions
-  setGraph: (nodes, edges, manifest) =>
+  setGraph: (nodes, edges, manifest) => {
+    // Extract all unique inferred tags from nodes
+    const inferredTagSet = new Set<string>();
+    nodes.forEach((node) => {
+      node.data.inferredTags?.forEach((tag) => inferredTagSet.add(tag));
+    });
+
     set({
       nodes,
       edges,
       projectName: manifest.projectName,
       generatedAt: manifest.generatedAt,
-    }),
+      inferredTagFilters: inferredTagSet, // Initialize with all inferred tags
+    });
+  },
 
   setSearchQuery: (query) =>
     set({

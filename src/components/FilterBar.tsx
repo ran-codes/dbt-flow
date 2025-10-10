@@ -16,12 +16,10 @@ export default function FilterBar() {
     tagFilters,
     tagFilterMode,
     inferredTagFilters,
-    inferredTagFilterMode,
     toggleResourceType,
     toggleTag,
     setTagFilterMode,
     toggleInferredTag,
-    setInferredTagFilterMode
   } = useGraphStore();
   const [isResourceExpanded, setIsResourceExpanded] = useState(false);
   const [isTagExpanded, setIsTagExpanded] = useState(false);
@@ -187,30 +185,6 @@ export default function FilterBar() {
 
                 {isInferredTagExpanded && (
                   <div className="flex items-center gap-3 max-w-2xl overflow-x-auto">
-                    {/* AND/OR Toggle */}
-                    <div className="flex items-center gap-1 bg-amber-100 rounded-lg p-1">
-                      <button
-                        onClick={() => setInferredTagFilterMode('OR')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          inferredTagFilterMode === 'OR'
-                            ? 'bg-amber-600 text-white'
-                            : 'text-amber-800 hover:bg-amber-200'
-                        }`}
-                      >
-                        OR
-                      </button>
-                      <button
-                        onClick={() => setInferredTagFilterMode('AND')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          inferredTagFilterMode === 'AND'
-                            ? 'bg-amber-600 text-white'
-                            : 'text-amber-800 hover:bg-amber-200'
-                        }`}
-                      >
-                        AND
-                      </button>
-                    </div>
-
                     {allInferredTags.map((tag) => (
                       <label
                         key={tag}

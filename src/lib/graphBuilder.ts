@@ -216,14 +216,10 @@ export function filterNodes(
     }
   }
 
-  // Filter by inferred tags - if inferred tags are selected, apply AND or OR logic
-  if (inferredTagFilters && inferredTagFilters.size > 0) {
-    if (inferredTagFilterMode === 'AND') {
-      // AND: node must have ALL selected inferred tags
-      filteredNodes = filteredNodes.filter((node) => {
-        if (!node.data.inferredTags) return false;
-        return Array.from(inferredTagFilters).every((tag) => node.data.inferredTags?.includes(tag));
-      });
+  // Filter by inferred tags - if no filters selected, show nothing; otherwise use OR logic
+  if (inferredTagFilters) {
+    if (inferredTagFilters.size === 0) {
+      filteredNodes = [];
     } else {
       // OR: node must have at least one of the selected inferred tags
       filteredNodes = filteredNodes.filter((node) =>
