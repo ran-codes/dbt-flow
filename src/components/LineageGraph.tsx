@@ -7,9 +7,13 @@ import ReactFlow, {
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
+  applyNodeChanges,
+  applyEdgeChanges,
   type NodeMouseHandler,
   type Node,
   type Edge,
+  type NodeChange,
+  type EdgeChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
@@ -69,6 +73,20 @@ function LineageGraphInner() {
     [setSelectedNode]
   );
 
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setFilteredNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    []
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setFilteredEdges((eds) => applyEdgeChanges(changes, eds));
+    },
+    []
+  );
+
   if (!nodes.length) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -84,6 +102,8 @@ function LineageGraphInner() {
         edges={filteredEdges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         fitView
         fitViewOptions={{
           padding: 0.2,
