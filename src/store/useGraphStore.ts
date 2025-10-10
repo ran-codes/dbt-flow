@@ -14,11 +14,14 @@ export type GraphStore = {
   // UI state
   searchQuery: string;
   selectedNode: GraphNode | null;
+  resourceTypeFilters: Set<string>;
 
   // Actions
   setGraph: (nodes: GraphNode[], edges: GraphEdge[], manifest: ParsedManifest) => void;
   setSearchQuery: (query: string) => void;
   setSelectedNode: (node: GraphNode | null) => void;
+  setResourceTypeFilters: (filters: Set<string>) => void;
+  toggleResourceType: (type: string) => void;
   clearGraph: () => void;
 };
 
@@ -30,6 +33,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
   generatedAt: '',
   searchQuery: '',
   selectedNode: null,
+  resourceTypeFilters: new Set(['model']), // Default: show only models
 
   // Actions
   setGraph: (nodes, edges, manifest) =>
@@ -50,6 +54,22 @@ export const useGraphStore = create<GraphStore>((set) => ({
       selectedNode: node,
     }),
 
+  setResourceTypeFilters: (filters) =>
+    set({
+      resourceTypeFilters: filters,
+    }),
+
+  toggleResourceType: (type) =>
+    set((state) => {
+      const newFilters = new Set(state.resourceTypeFilters);
+      if (newFilters.has(type)) {
+        newFilters.delete(type);
+      } else {
+        newFilters.add(type);
+      }
+      return { resourceTypeFilters: newFilters };
+    }),
+
   clearGraph: () =>
     set({
       nodes: [],
@@ -58,5 +78,6 @@ export const useGraphStore = create<GraphStore>((set) => ({
       generatedAt: '',
       searchQuery: '',
       selectedNode: null,
+      resourceTypeFilters: new Set(['model']),
     }),
 }));

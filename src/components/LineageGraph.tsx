@@ -12,18 +12,19 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
 import { filterNodes } from '@/lib/graphBuilder';
+import FilterBar from './FilterBar';
 
 export default function LineageGraph() {
-  const { nodes, edges, searchQuery, setSelectedNode, selectedNode } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, setSelectedNode, selectedNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
 
-  // Update filtered data when search query or data changes
+  // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
-    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery);
+    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters);
     setFilteredNodes(filtered);
     setFilteredEdges(filteredE);
-  }, [nodes, edges, searchQuery]);
+  }, [nodes, edges, searchQuery, resourceTypeFilters]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -124,7 +125,7 @@ export default function LineageGraph() {
       )}
 
       {/* Stats overlay */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
+      <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
         <div className="flex items-center gap-4 text-sm">
           <span className="text-gray-600">
             Nodes: <span className="font-semibold text-gray-900">{filteredNodes.length}</span>
@@ -134,6 +135,9 @@ export default function LineageGraph() {
           </span>
         </div>
       </div>
+
+      {/* Filter bar */}
+      <FilterBar />
     </div>
   );
 }

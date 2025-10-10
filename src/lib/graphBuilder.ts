@@ -147,24 +147,33 @@ export function getLayoutedElements(
 }
 
 /**
- * Filters nodes by search query
+ * Filters nodes by search query and resource types
  */
 export function filterNodes(
   nodes: GraphNode[],
   edges: GraphEdge[],
-  searchQuery: string
+  searchQuery: string,
+  resourceTypeFilters?: Set<string>
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
-  if (!searchQuery.trim()) {
-    return { nodes, edges };
+  let filteredNodes = nodes;
+
+  // Filter by resource type
+  if (resourceTypeFilters && resourceTypeFilters.size > 0) {
+    filteredNodes = filteredNodes.filter((node) =>
+      resourceTypeFilters.has(node.data.type)
+    );
   }
 
-  const query = searchQuery.toLowerCase();
-  const filteredNodes = nodes.filter(
-    (node) =>
-      node.data.label.toLowerCase().includes(query) ||
-      node.data.description?.toLowerCase().includes(query) ||
-      node.data.type.toLowerCase().includes(query)
-  );
+  // Filter by search query
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredNodes = filteredNodes.filter(
+      (node) =>
+        node.data.label.toLowerCase().includes(query) ||
+        node.data.description?.toLowerCase().includes(query) ||
+        node.data.type.toLowerCase().includes(query)
+    );
+  }
 
   const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
   const filteredEdges = edges.filter(
