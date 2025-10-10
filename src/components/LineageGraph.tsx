@@ -417,9 +417,9 @@ function LineageGraphInner() {
           <button
             onClick={handleRelayout}
             className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
-            title="Relayout nodes to position them closer together"
+            title="Optimize node positions and spacing"
           >
-            Re-Layout
+            Optimize Layout
           </button>
           {focusedNodeId && (
             <button
