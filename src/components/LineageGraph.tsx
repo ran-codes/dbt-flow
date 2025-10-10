@@ -59,8 +59,11 @@ export default function LineageGraph() {
         }}
       >
         <Background color="#94a3b8" gap={16} />
-        <Controls />
+        <Controls position="top-right" />
         <MiniMap
+          position="top-left"
+          pannable
+          zoomable
           nodeColor={(node) => {
             return (node.style?.background as string) || '#6b7280';
           }}

@@ -7,11 +7,6 @@ import { nodeColors } from '@/lib/graphBuilder';
 const RESOURCE_TYPES = [
   { type: 'model', label: 'Models', color: nodeColors.model },
   { type: 'source', label: 'Sources', color: nodeColors.source },
-  { type: 'test', label: 'Tests', color: nodeColors.test },
-  { type: 'seed', label: 'Seeds', color: nodeColors.seed },
-  { type: 'snapshot', label: 'Snapshots', color: nodeColors.snapshot },
-  { type: 'exposure', label: 'Exposures', color: nodeColors.exposure },
-  { type: 'metric', label: 'Metrics', color: nodeColors.metric },
 ];
 
 export default function FilterBar() {
