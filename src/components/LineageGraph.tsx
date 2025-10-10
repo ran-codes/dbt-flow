@@ -11,7 +11,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
-import { filterNodes, getNodeColor } from '@/lib/graphBuilder';
+import { filterNodes, getNodeColor, getLayoutedElements } from '@/lib/graphBuilder';
 import FilterBar from './FilterBar';
 import CustomNode from './CustomNode';
 
@@ -30,6 +30,14 @@ export default function LineageGraph() {
     setFilteredNodes(filtered);
     setFilteredEdges(filteredE);
   }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode]);
+
+  // Relayout filtered nodes to position them closer together
+  const handleRelayout = useCallback(() => {
+    if (filteredNodes.length === 0) return;
+
+    const layouted = getLayoutedElements(filteredNodes as any[], filteredEdges as any[]);
+    setFilteredNodes(layouted.nodes);
+  }, [filteredNodes, filteredEdges]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -163,7 +171,7 @@ export default function LineageGraph() {
         </div>
       )}
 
-      {/* Stats overlay */}
+      {/* Stats overlay with relayout button */}
       <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
         <div className="flex items-center gap-4 text-sm">
           <span className="text-gray-600">
@@ -172,6 +180,13 @@ export default function LineageGraph() {
           <span className="text-gray-600">
             Edges: <span className="font-semibold text-gray-900">{filteredEdges.length}</span>
           </span>
+          <button
+            onClick={handleRelayout}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
+            title="Relayout nodes to position them closer together"
+          >
+            Re-Layout
+          </button>
         </div>
       </div>
 
