@@ -144,28 +144,36 @@ function LineageGraphInner() {
     (nodeId: string) => {
       setContextMenu(null);
 
-      // Get ancestors (parents)
+      // Get ancestors (parents) and include the clicked node
       const ancestors = getAncestors(nodeId, filteredEdges);
-      ancestors.delete(nodeId); // Don't hide the clicked node itself
+
+      // Close details card if it's one of the nodes being hidden
+      if (selectedNode && ancestors.has(selectedNode.id)) {
+        setSelectedNode(null);
+      }
 
       // Add to hidden nodes
       setHiddenNodes((prev) => new Set([...prev, ...ancestors]));
     },
-    [filteredEdges]
+    [filteredEdges, selectedNode, setSelectedNode]
   );
 
   const handleHideChildren = useCallback(
     (nodeId: string) => {
       setContextMenu(null);
 
-      // Get descendants (children)
+      // Get descendants (children) and include the clicked node
       const descendants = getDescendants(nodeId, filteredEdges);
-      descendants.delete(nodeId); // Don't hide the clicked node itself
+
+      // Close details card if it's one of the nodes being hidden
+      if (selectedNode && descendants.has(selectedNode.id)) {
+        setSelectedNode(null);
+      }
 
       // Add to hidden nodes
       setHiddenNodes((prev) => new Set([...prev, ...descendants]));
     },
-    [filteredEdges]
+    [filteredEdges, selectedNode, setSelectedNode]
   );
 
   const handleShowFullGraph = useCallback(() => {
