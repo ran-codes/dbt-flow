@@ -35,7 +35,7 @@ function LineageGraphInner() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
-  const { fitView, getZoom } = useReactFlow();
+  const { fitView, getZoom, setViewport, getViewport } = useReactFlow();
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
@@ -65,11 +65,28 @@ function LineageGraphInner() {
     const layouted = getLayoutedElements(filteredNodes as any[], filteredEdges as any[]);
     setFilteredNodes(layouted.nodes);
 
-    // Fit view after layout is applied (max 100% zoom)
+    // Fit view after layout is applied, then align to top-left
     setTimeout(() => {
-      fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
+      fitView({ padding: 0.2, duration: 0, maxZoom: 1 });
+
+      // Get the current viewport to calculate left-aligned position
+      setTimeout(() => {
+        const viewport = getViewport();
+        const zoom = Math.min(viewport.zoom, 1); // Ensure max 1x zoom
+
+        // Find leftmost and topmost node positions
+        const minX = Math.min(...layouted.nodes.map(n => n.position.x));
+        const minY = Math.min(...layouted.nodes.map(n => n.position.y));
+
+        // Set viewport to align graph to top-left with padding
+        setViewport({
+          x: -minX * zoom + 50, // 50px padding from left
+          y: -minY * zoom + 50, // 50px padding from top
+          zoom: zoom
+        }, { duration: 300 });
+      }, 10);
     }, 0);
-  }, [filteredNodes, filteredEdges, fitView]);
+  }, [filteredNodes, filteredEdges, fitView, getViewport, setViewport]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -232,6 +249,12 @@ function LineageGraphInner() {
     animated: highlightedEdges.has(edge.id),
   }));
 
+  // Reset highlighting when clicking on background/pane
+  const onPaneClick = useCallback(() => {
+    setHighlightedNodes(new Set());
+    setHighlightedEdges(new Set());
+  }, []);
+
   return (
     <div className="w-full h-full">
       <ReactFlow
@@ -242,6 +265,7 @@ function LineageGraphInner() {
         onNodeContextMenu={onNodeContextMenu}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onPaneClick={onPaneClick}
         fitView
         fitViewOptions={{
           padding: 0.2,
