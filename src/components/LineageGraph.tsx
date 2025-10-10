@@ -11,7 +11,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
-import { filterNodes } from '@/lib/graphBuilder';
+import { filterNodes, getNodeColor } from '@/lib/graphBuilder';
 import FilterBar from './FilterBar';
 import CustomNode from './CustomNode';
 
@@ -70,9 +70,7 @@ export default function LineageGraph() {
           position="top-left"
           pannable
           zoomable
-          nodeColor={(node) => {
-            return (node.style?.background as string) || '#6b7280';
-          }}
+          nodeColor={(node: any) => getNodeColor(node.data?.type || 'default')}
           maskColor="rgba(0, 0, 0, 0.2)"
         />
       </ReactFlow>
