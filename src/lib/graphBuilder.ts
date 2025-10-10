@@ -157,11 +157,15 @@ export function filterNodes(
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   let filteredNodes = nodes;
 
-  // Filter by resource type
-  if (resourceTypeFilters && resourceTypeFilters.size > 0) {
-    filteredNodes = filteredNodes.filter((node) =>
-      resourceTypeFilters.has(node.data.type)
-    );
+  // Filter by resource type - if no filters selected, show nothing
+  if (resourceTypeFilters) {
+    if (resourceTypeFilters.size === 0) {
+      filteredNodes = [];
+    } else {
+      filteredNodes = filteredNodes.filter((node) =>
+        resourceTypeFilters.has(node.data.type)
+      );
+    }
   }
 
   // Filter by search query
