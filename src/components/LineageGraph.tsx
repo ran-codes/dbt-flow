@@ -31,6 +31,8 @@ function LineageGraphInner() {
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
   const [highlightedEdges, setHighlightedEdges] = useState<Set<string>>(new Set());
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const hasAutoRelayoutRef = useRef(false);
   const { fitView } = useReactFlow();
 
@@ -91,6 +93,77 @@ function LineageGraphInner() {
     [setSelectedNode, filteredEdges]
   );
 
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        nodeId: node.id,
+      });
+    },
+    []
+  );
+
+  const handleFocusOnNode = useCallback(
+    (nodeId: string) => {
+      setFocusedNodeId(nodeId);
+      setContextMenu(null);
+
+      // Get all ancestors and descendants
+      const ancestors = getAncestors(nodeId, edges);
+      const descendants = getDescendants(nodeId, edges);
+      const focusedNodes = new Set([...ancestors, ...descendants]);
+
+      // Filter nodes to only show the lineage
+      const lineageNodes = filteredNodes.filter((node) => focusedNodes.has(node.id));
+      const lineageEdges = filteredEdges.filter(
+        (edge) => focusedNodes.has(edge.source) && focusedNodes.has(edge.target)
+      );
+
+      // Relayout the focused nodes
+      const layouted = getLayoutedElements(lineageNodes as any[], lineageEdges as any[]);
+      setFilteredNodes(layouted.nodes);
+      setFilteredEdges(lineageEdges);
+
+      // Clear highlights and fit view
+      setHighlightedNodes(new Set());
+      setHighlightedEdges(new Set());
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 300 });
+      }, 100);
+    },
+    [filteredNodes, filteredEdges, edges, fitView]
+  );
+
+  const handleShowFullGraph = useCallback(() => {
+    setFocusedNodeId(null);
+    setContextMenu(null);
+
+    // Re-filter to show all nodes based on current filters
+    const { nodes: filtered, edges: filteredE } = filterNodes(
+      nodes,
+      edges,
+      searchQuery,
+      resourceTypeFilters,
+      tagFilters,
+      tagFilterMode,
+      inferredTagFilters,
+      'OR'
+    );
+
+    const layouted = getLayoutedElements(filtered as any[], filteredE as any[]);
+    setFilteredNodes(layouted.nodes);
+    setFilteredEdges(filteredE);
+
+    // Clear highlights and fit view
+    setHighlightedNodes(new Set());
+    setHighlightedEdges(new Set());
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    }, 100);
+  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setFilteredNodes((nds) => applyNodeChanges(changes, nds));
@@ -104,6 +177,13 @@ function LineageGraphInner() {
     },
     []
   );
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   if (!nodes.length) {
     return (
@@ -140,6 +220,7 @@ function LineageGraphInner() {
         edges={styledEdges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         fitView
@@ -252,6 +333,56 @@ function LineageGraphInner() {
         </div>
       )}
 
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="absolute bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50 min-w-[180px]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+            onClick={() => handleFocusOnNode(contextMenu.nodeId)}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Focus on Node
+          </button>
+          {focusedNodeId && (
+            <button
+              className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+              onClick={handleShowFullGraph}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              </svg>
+              Show Full Graph
+            </button>
+          )}
+          <hr className="my-2 border-slate-200" />
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-slate-600"
+            onClick={() => {
+              const node = filteredNodes.find((n) => n.id === contextMenu.nodeId);
+              if (node) {
+                navigator.clipboard.writeText(node.data.label);
+                setContextMenu(null);
+              }
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy Node Name
+          </button>
+        </div>
+      )}
+
       {/* Stats overlay with relayout button */}
       <div className="absolute bottom-16 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
         <div className="flex items-center gap-4 text-sm">
@@ -268,6 +399,15 @@ function LineageGraphInner() {
           >
             Re-Layout
           </button>
+          {focusedNodeId && (
+            <button
+              onClick={handleShowFullGraph}
+              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium rounded-md transition-colors"
+              title="Show full graph"
+            >
+              Show Full Graph
+            </button>
+          )}
         </div>
       </div>
 
