@@ -10,15 +10,37 @@ const RESOURCE_TYPES = [
 ];
 
 export default function FilterBar() {
-  const { nodes, resourceTypeFilters, tagFilters, tagFilterMode, toggleResourceType, toggleTag, setTagFilterMode } = useGraphStore();
+  const {
+    nodes,
+    resourceTypeFilters,
+    tagFilters,
+    tagFilterMode,
+    inferredTagFilters,
+    inferredTagFilterMode,
+    toggleResourceType,
+    toggleTag,
+    setTagFilterMode,
+    toggleInferredTag,
+    setInferredTagFilterMode
+  } = useGraphStore();
   const [isResourceExpanded, setIsResourceExpanded] = useState(false);
   const [isTagExpanded, setIsTagExpanded] = useState(false);
+  const [isInferredTagExpanded, setIsInferredTagExpanded] = useState(false);
 
   // Extract all unique tags from nodes
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     nodes.forEach((node) => {
       node.data.tags?.forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [nodes]);
+
+  // Extract all unique inferred tags from nodes
+  const allInferredTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    nodes.forEach((node) => {
+      node.data.inferredTags?.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet).sort();
   }, [nodes]);
@@ -139,9 +161,77 @@ export default function FilterBar() {
                 )}
               </>
             )}
+
+            {/* Inferred Tags Filter */}
+            {allInferredTags.length > 0 && (
+              <>
+                <button
+                  onClick={() => setIsInferredTagExpanded(!isInferredTagExpanded)}
+                  className="flex items-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors text-sm font-semibold text-amber-800"
+                >
+                  <span>Inferred Tags</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${isInferredTagExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {isInferredTagExpanded && (
+                  <div className="flex items-center gap-3 max-w-2xl overflow-x-auto">
+                    {/* AND/OR Toggle */}
+                    <div className="flex items-center gap-1 bg-amber-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setInferredTagFilterMode('OR')}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                          inferredTagFilterMode === 'OR'
+                            ? 'bg-amber-600 text-white'
+                            : 'text-amber-800 hover:bg-amber-200'
+                        }`}
+                      >
+                        OR
+                      </button>
+                      <button
+                        onClick={() => setInferredTagFilterMode('AND')}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                          inferredTagFilterMode === 'AND'
+                            ? 'bg-amber-600 text-white'
+                            : 'text-amber-800 hover:bg-amber-200'
+                        }`}
+                      >
+                        AND
+                      </button>
+                    </div>
+
+                    {allInferredTags.map((tag) => (
+                      <label
+                        key={tag}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors whitespace-nowrap"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={inferredTagFilters.has(tag)}
+                          onChange={() => toggleInferredTag(tag)}
+                          className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-2 focus:ring-amber-500"
+                        />
+                        <span className="text-sm text-amber-800 font-medium">{tag}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {!isResourceExpanded && !isTagExpanded && (
+          {!isResourceExpanded && !isTagExpanded && !isInferredTagExpanded && (
             <div className="flex items-center gap-4 text-xs text-slate-600">
               {/* Resource Type Pills */}
               <div className="flex items-center gap-2">
@@ -172,6 +262,23 @@ export default function FilterBar() {
                       <span
                         key={tag}
                         className="px-2 py-1 rounded bg-slate-500 text-white text-xs font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Inferred Tag Pills */}
+              {inferredTagFilters.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span>Inferred:</span>
+                  <div className="flex items-center gap-1">
+                    {Array.from(inferredTagFilters).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-1 rounded bg-amber-500 text-white text-xs font-medium"
                       >
                         {tag}
                       </span>

@@ -29,6 +29,22 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
             {data.label}
           </div>
 
+          {/* Inferred Tags (orange/amber) */}
+          {data.inferredTags && data.inferredTags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {data.inferredTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] rounded font-medium"
+                  title={`Inferred: ${tag}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Regular Tags (white/transparent) */}
           {data.tags && data.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {data.tags.slice(0, 3).map((tag) => (

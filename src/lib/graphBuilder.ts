@@ -10,6 +10,7 @@ export type GraphNode = Node<{
   database?: string;
   schema?: string;
   tags?: string[];
+  inferredTags?: string[];
 }>;
 
 export type GraphEdge = Edge;
@@ -39,6 +40,20 @@ export function getNodeColor(resourceType: string): string {
 }
 
 /**
+ * Infer tags from model name based on prefix
+ */
+function inferTagsFromName(name: string): string[] {
+  const lowerName = name.toLowerCase();
+  if (lowerName.startsWith('int__')) {
+    return ['int'];
+  } else if (lowerName.startsWith('mart__')) {
+    return ['mart'];
+  } else {
+    return ['base'];
+  }
+}
+
+/**
  * Converts DBT nodes to React Flow nodes and edges
  */
 export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
@@ -58,6 +73,7 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
       database: node.database,
       schema: node.schema,
       tags: node.tags,
+      inferredTags: inferTagsFromName(node.name),
     },
     style: {
       padding: 0,
@@ -144,7 +160,7 @@ export function getLayoutedElements(
 }
 
 /**
- * Filters nodes by search query, resource types, and tags
+ * Filters nodes by search query, resource types, tags, and inferred tags
  */
 export function filterNodes(
   nodes: GraphNode[],
@@ -152,7 +168,9 @@ export function filterNodes(
   searchQuery: string,
   resourceTypeFilters?: Set<string>,
   tagFilters?: Set<string>,
-  tagFilterMode?: 'AND' | 'OR'
+  tagFilterMode?: 'AND' | 'OR',
+  inferredTagFilters?: Set<string>,
+  inferredTagFilterMode?: 'AND' | 'OR'
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   let filteredNodes = nodes;
 
@@ -179,6 +197,22 @@ export function filterNodes(
       // OR: node must have at least one of the selected tags
       filteredNodes = filteredNodes.filter((node) =>
         node.data.tags?.some((tag) => tagFilters.has(tag))
+      );
+    }
+  }
+
+  // Filter by inferred tags - if inferred tags are selected, apply AND or OR logic
+  if (inferredTagFilters && inferredTagFilters.size > 0) {
+    if (inferredTagFilterMode === 'AND') {
+      // AND: node must have ALL selected inferred tags
+      filteredNodes = filteredNodes.filter((node) => {
+        if (!node.data.inferredTags) return false;
+        return Array.from(inferredTagFilters).every((tag) => node.data.inferredTags?.includes(tag));
+      });
+    } else {
+      // OR: node must have at least one of the selected inferred tags
+      filteredNodes = filteredNodes.filter((node) =>
+        node.data.inferredTags?.some((tag) => inferredTagFilters.has(tag))
       );
     }
   }

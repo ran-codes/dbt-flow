@@ -20,16 +20,16 @@ const nodeTypes = {
 };
 
 export default function LineageGraph() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, setSelectedNode, selectedNode } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode, setSelectedNode, selectedNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
-    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode);
+    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode);
     setFilteredNodes(filtered);
     setFilteredEdges(filteredE);
-  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode]);
+  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -117,6 +117,22 @@ export default function LineageGraph() {
             <div className="mb-2">
               <span className="text-sm text-gray-500">Schema: </span>
               <span className="text-sm text-gray-900">{selectedNode.data.schema}</span>
+            </div>
+          )}
+
+          {selectedNode.data.inferredTags && selectedNode.data.inferredTags.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Inferred Tags</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedNode.data.inferredTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-md font-medium"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 

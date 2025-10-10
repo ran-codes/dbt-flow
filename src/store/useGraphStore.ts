@@ -17,6 +17,8 @@ export type GraphStore = {
   resourceTypeFilters: Set<string>;
   tagFilters: Set<string>;
   tagFilterMode: 'AND' | 'OR';
+  inferredTagFilters: Set<string>;
+  inferredTagFilterMode: 'AND' | 'OR';
 
   // Actions
   setGraph: (nodes: GraphNode[], edges: GraphEdge[], manifest: ParsedManifest) => void;
@@ -27,6 +29,9 @@ export type GraphStore = {
   setTagFilters: (filters: Set<string>) => void;
   toggleTag: (tag: string) => void;
   setTagFilterMode: (mode: 'AND' | 'OR') => void;
+  setInferredTagFilters: (filters: Set<string>) => void;
+  toggleInferredTag: (tag: string) => void;
+  setInferredTagFilterMode: (mode: 'AND' | 'OR') => void;
   clearGraph: () => void;
 };
 
@@ -41,6 +46,8 @@ export const useGraphStore = create<GraphStore>((set) => ({
   resourceTypeFilters: new Set(['model']), // Default: show only models
   tagFilters: new Set(), // Default: no tag filters
   tagFilterMode: 'OR', // Default: OR logic
+  inferredTagFilters: new Set(), // Default: no inferred tag filters
+  inferredTagFilterMode: 'OR', // Default: OR logic
 
   // Actions
   setGraph: (nodes, edges, manifest) =>
@@ -98,6 +105,27 @@ export const useGraphStore = create<GraphStore>((set) => ({
       tagFilterMode: mode,
     }),
 
+  setInferredTagFilters: (filters) =>
+    set({
+      inferredTagFilters: filters,
+    }),
+
+  toggleInferredTag: (tag) =>
+    set((state) => {
+      const newFilters = new Set(state.inferredTagFilters);
+      if (newFilters.has(tag)) {
+        newFilters.delete(tag);
+      } else {
+        newFilters.add(tag);
+      }
+      return { inferredTagFilters: newFilters };
+    }),
+
+  setInferredTagFilterMode: (mode) =>
+    set({
+      inferredTagFilterMode: mode,
+    }),
+
   clearGraph: () =>
     set({
       nodes: [],
@@ -109,5 +137,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       resourceTypeFilters: new Set(['model']),
       tagFilters: new Set(),
       tagFilterMode: 'OR',
+      inferredTagFilters: new Set(),
+      inferredTagFilterMode: 'OR',
     }),
 }));
