@@ -32,10 +32,11 @@ function LineageGraphInner() {
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
   const [highlightedEdges, setHighlightedEdges] = useState<Set<string>>(new Set());
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [hiddenNodes, setHiddenNodes] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
-  const { fitView, getZoom, setViewport, getViewport } = useReactFlow();
+  const { fitView, getZoom } = useReactFlow();
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
@@ -65,28 +66,10 @@ function LineageGraphInner() {
     const layouted = getLayoutedElements(filteredNodes as any[], filteredEdges as any[]);
     setFilteredNodes(layouted.nodes);
 
-    // Fit view after layout is applied, then align to top-left
     setTimeout(() => {
-      fitView({ padding: 0.2, duration: 0, maxZoom: 1 });
-
-      // Get the current viewport to calculate left-aligned position
-      setTimeout(() => {
-        const viewport = getViewport();
-        const zoom = Math.min(viewport.zoom, 1); // Ensure max 1x zoom
-
-        // Find leftmost and topmost node positions
-        const minX = Math.min(...layouted.nodes.map(n => n.position.x));
-        const minY = Math.min(...layouted.nodes.map(n => n.position.y));
-
-        // Set viewport to align graph to top-left with padding
-        setViewport({
-          x: -minX * zoom + 50, // 50px padding from left
-          y: -minY * zoom + 50, // 50px padding from top
-          zoom: zoom
-        }, { duration: 300 });
-      }, 10);
+      fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
     }, 0);
-  }, [filteredNodes, filteredEdges, fitView, getViewport, setViewport]);
+  }, [filteredNodes, filteredEdges, fitView]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -128,6 +111,9 @@ function LineageGraphInner() {
       setFocusedNodeId(nodeId);
       setContextMenu(null);
 
+      // Close details panel if open
+      setSelectedNode(null);
+
       // Get all ancestors and descendants
       const ancestors = getAncestors(nodeId, edges);
       const descendants = getDescendants(nodeId, edges);
@@ -151,12 +137,43 @@ function LineageGraphInner() {
         fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
       }, 100);
     },
-    [filteredNodes, filteredEdges, edges, fitView]
+    [filteredNodes, filteredEdges, edges, fitView, setSelectedNode]
+  );
+
+  const handleHideParents = useCallback(
+    (nodeId: string) => {
+      setContextMenu(null);
+
+      // Get ancestors (parents)
+      const ancestors = getAncestors(nodeId, filteredEdges);
+      ancestors.delete(nodeId); // Don't hide the clicked node itself
+
+      // Add to hidden nodes
+      setHiddenNodes((prev) => new Set([...prev, ...ancestors]));
+    },
+    [filteredEdges]
+  );
+
+  const handleHideChildren = useCallback(
+    (nodeId: string) => {
+      setContextMenu(null);
+
+      // Get descendants (children)
+      const descendants = getDescendants(nodeId, filteredEdges);
+      descendants.delete(nodeId); // Don't hide the clicked node itself
+
+      // Add to hidden nodes
+      setHiddenNodes((prev) => new Set([...prev, ...descendants]));
+    },
+    [filteredEdges]
   );
 
   const handleShowFullGraph = useCallback(() => {
     setFocusedNodeId(null);
     setContextMenu(null);
+
+    // Clear hidden nodes
+    setHiddenNodes(new Set());
 
     // Re-filter to show all nodes based on current filters
     const { nodes: filtered, edges: filteredE } = filterNodes(
@@ -225,8 +242,13 @@ function LineageGraphInner() {
     );
   }
 
-  // Apply highlighting to nodes and edges
-  const styledNodes = filteredNodes.map((node) => ({
+  // Apply highlighting to nodes and edges, and filter out hidden nodes
+  const visibleNodes = filteredNodes.filter((node) => !hiddenNodes.has(node.id));
+  const visibleEdges = filteredEdges.filter(
+    (edge) => !hiddenNodes.has(edge.source) && !hiddenNodes.has(edge.target)
+  );
+
+  const styledNodes = visibleNodes.map((node) => ({
     ...node,
     style: {
       ...node.style,
@@ -234,7 +256,7 @@ function LineageGraphInner() {
     },
   }));
 
-  const styledEdges = filteredEdges.map((edge) => ({
+  const styledEdges = visibleEdges.map((edge) => ({
     ...edge,
     style: {
       ...edge.style,
@@ -396,7 +418,25 @@ function LineageGraphInner() {
             </svg>
             Focus on Node
           </button>
-          {focusedNodeId && (
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+            onClick={() => handleHideParents(contextMenu.nodeId)}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+            Hide This and Upstream
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+            onClick={() => handleHideChildren(contextMenu.nodeId)}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+            Hide This and Downstream
+          </button>
+          {(focusedNodeId || hiddenNodes.size > 0) && (
             <button
               className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
               onClick={handleShowFullGraph}
@@ -445,7 +485,7 @@ function LineageGraphInner() {
           >
             Optimize Layout
           </button>
-          {focusedNodeId && (
+          {(focusedNodeId || hiddenNodes.size > 0) && (
             <button
               onClick={handleShowFullGraph}
               className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium rounded-md transition-colors"
