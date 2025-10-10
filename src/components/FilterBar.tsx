@@ -46,7 +46,7 @@ export default function FilterBar() {
   }, [nodes]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-300 shadow-lg z-20">
+    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-300 shadow-lg z-20">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -169,7 +169,7 @@ export default function FilterBar() {
                   onClick={() => setIsInferredTagExpanded(!isInferredTagExpanded)}
                   className="flex items-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors text-sm font-semibold text-amber-800"
                 >
-                  <span>Inferred Tags</span>
+                  <span>Inferred Layer</span>
                   <svg
                     className={`w-4 h-4 transition-transform ${isInferredTagExpanded ? 'rotate-180' : ''}`}
                     fill="none"

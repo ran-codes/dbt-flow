@@ -55,7 +55,7 @@ export default function LineageGraph() {
   }
 
   return (
-    <div className="w-full h-screen">
+    <div className="w-full h-full">
       <ReactFlow
         nodes={filteredNodes}
         edges={filteredEdges}
@@ -130,7 +130,7 @@ export default function LineageGraph() {
 
           {selectedNode.data.inferredTags && selectedNode.data.inferredTags.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Inferred Tags</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Inferred Layer</h4>
               <div className="flex flex-wrap gap-2">
                 {selectedNode.data.inferredTags.map((tag) => (
                   <span
@@ -172,7 +172,7 @@ export default function LineageGraph() {
       )}
 
       {/* Stats overlay with relayout button */}
-      <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
+      <div className="absolute bottom-16 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
         <div className="flex items-center gap-4 text-sm">
           <span className="text-gray-600">
             Nodes: <span className="font-semibold text-gray-900">{filteredNodes.length}</span>

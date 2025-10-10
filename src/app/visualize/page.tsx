@@ -86,8 +86,8 @@ export default function VisualizePage() {
         </div>
       </header>
 
-      {/* Graph area */}
-      <div className="flex-1 relative">
+      {/* Graph area - calculate height to account for header and filter bar */}
+      <div className="flex-1 relative overflow-hidden" style={{ height: 'calc(100vh - 4.5rem - 3.5rem)' }}>
         <LineageGraph />
       </div>
     </div>
