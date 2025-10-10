@@ -9,6 +9,7 @@ export type GraphNode = Node<{
   sql?: string;
   database?: string;
   schema?: string;
+  tags?: string[];
 }>;
 
 export type GraphEdge = Edge;
@@ -56,6 +57,7 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
       sql: node.compiled_code || node.raw_code,
       database: node.database,
       schema: node.schema,
+      tags: node.tags,
     },
     style: {
       background: getNodeColor(node.resource_type),
@@ -147,13 +149,15 @@ export function getLayoutedElements(
 }
 
 /**
- * Filters nodes by search query and resource types
+ * Filters nodes by search query, resource types, and tags
  */
 export function filterNodes(
   nodes: GraphNode[],
   edges: GraphEdge[],
   searchQuery: string,
-  resourceTypeFilters?: Set<string>
+  resourceTypeFilters?: Set<string>,
+  tagFilters?: Set<string>,
+  tagFilterMode?: 'AND' | 'OR'
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   let filteredNodes = nodes;
 
@@ -164,6 +168,22 @@ export function filterNodes(
     } else {
       filteredNodes = filteredNodes.filter((node) =>
         resourceTypeFilters.has(node.data.type)
+      );
+    }
+  }
+
+  // Filter by tags - if tags are selected, apply AND or OR logic
+  if (tagFilters && tagFilters.size > 0) {
+    if (tagFilterMode === 'AND') {
+      // AND: node must have ALL selected tags
+      filteredNodes = filteredNodes.filter((node) => {
+        if (!node.data.tags) return false;
+        return Array.from(tagFilters).every((tag) => node.data.tags?.includes(tag));
+      });
+    } else {
+      // OR: node must have at least one of the selected tags
+      filteredNodes = filteredNodes.filter((node) =>
+        node.data.tags?.some((tag) => tagFilters.has(tag))
       );
     }
   }

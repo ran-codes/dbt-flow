@@ -15,6 +15,8 @@ export type GraphStore = {
   searchQuery: string;
   selectedNode: GraphNode | null;
   resourceTypeFilters: Set<string>;
+  tagFilters: Set<string>;
+  tagFilterMode: 'AND' | 'OR';
 
   // Actions
   setGraph: (nodes: GraphNode[], edges: GraphEdge[], manifest: ParsedManifest) => void;
@@ -22,6 +24,9 @@ export type GraphStore = {
   setSelectedNode: (node: GraphNode | null) => void;
   setResourceTypeFilters: (filters: Set<string>) => void;
   toggleResourceType: (type: string) => void;
+  setTagFilters: (filters: Set<string>) => void;
+  toggleTag: (tag: string) => void;
+  setTagFilterMode: (mode: 'AND' | 'OR') => void;
   clearGraph: () => void;
 };
 
@@ -34,6 +39,8 @@ export const useGraphStore = create<GraphStore>((set) => ({
   searchQuery: '',
   selectedNode: null,
   resourceTypeFilters: new Set(['model']), // Default: show only models
+  tagFilters: new Set(), // Default: no tag filters
+  tagFilterMode: 'OR', // Default: OR logic
 
   // Actions
   setGraph: (nodes, edges, manifest) =>
@@ -70,6 +77,27 @@ export const useGraphStore = create<GraphStore>((set) => ({
       return { resourceTypeFilters: newFilters };
     }),
 
+  setTagFilters: (filters) =>
+    set({
+      tagFilters: filters,
+    }),
+
+  toggleTag: (tag) =>
+    set((state) => {
+      const newFilters = new Set(state.tagFilters);
+      if (newFilters.has(tag)) {
+        newFilters.delete(tag);
+      } else {
+        newFilters.add(tag);
+      }
+      return { tagFilters: newFilters };
+    }),
+
+  setTagFilterMode: (mode) =>
+    set({
+      tagFilterMode: mode,
+    }),
+
   clearGraph: () =>
     set({
       nodes: [],
@@ -79,5 +107,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       searchQuery: '',
       selectedNode: null,
       resourceTypeFilters: new Set(['model']),
+      tagFilters: new Set(),
+      tagFilterMode: 'OR',
     }),
 }));

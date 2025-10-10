@@ -13,18 +13,23 @@ import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
 import { filterNodes } from '@/lib/graphBuilder';
 import FilterBar from './FilterBar';
+import CustomNode from './CustomNode';
+
+const nodeTypes = {
+  default: CustomNode,
+};
 
 export default function LineageGraph() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, setSelectedNode, selectedNode } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, setSelectedNode, selectedNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
-    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters);
+    const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode);
     setFilteredNodes(filtered);
     setFilteredEdges(filteredE);
-  }, [nodes, edges, searchQuery, resourceTypeFilters]);
+  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -46,6 +51,7 @@ export default function LineageGraph() {
       <ReactFlow
         nodes={filteredNodes}
         edges={filteredEdges}
+        nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
         fitView
         fitViewOptions={{
