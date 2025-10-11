@@ -31,28 +31,74 @@ export default function Home() {
   };
 
   const handleDemoClick = async () => {
+    console.log('=== DEMO BUTTON CLICKED ===');
+    console.log('window.location.href:', window.location.href);
+    console.log('window.location.origin:', window.location.origin);
+    console.log('window.location.pathname:', window.location.pathname);
+
     setError('');
     setIsLoading(true);
 
     try {
       // Load the demo test.json from public folder
-      // Use relative path from current location to handle basePath in production
-      const basePath = window.location.pathname.split('/').slice(0, -1).join('/') || '';
-      const testJsonPath = basePath ? `${basePath}/test.json` : '/test.json';
-      const response = await fetch(testJsonPath);
-      if (!response.ok) throw new Error('Failed to load demo manifest');
+      // Use window.location.origin + pathname to construct full URL that works with basePath
+      const currentPath = window.location.pathname.endsWith('/')
+        ? window.location.pathname.slice(0, -1)
+        : window.location.pathname;
+
+      console.log('currentPath (after processing):', currentPath);
+
+      const testJsonUrl = `${window.location.origin}${currentPath}/test.json`;
+      console.log('Constructed testJsonUrl:', testJsonUrl);
+      console.log('Starting fetch...');
+
+      const response = await fetch(testJsonUrl);
+      console.log('Fetch response received');
+      console.log('Response status:', response.status);
+      console.log('Response statusText:', response.statusText);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.error('❌ Failed to fetch - response not ok');
+        throw new Error(`Failed to load demo manifest (${response.status}: ${response.statusText})`);
+      }
+
+      console.log('Parsing JSON...');
       const manifest = await response.json() as DbtManifest;
+      console.log('✅ Demo manifest loaded successfully');
+      console.log('Manifest keys:', Object.keys(manifest));
+      console.log('Manifest.nodes count:', Object.keys(manifest.nodes || {}).length);
+      console.log('Manifest.sources count:', Object.keys(manifest.sources || {}).length);
+
       const parsed = {
         nodes: [...Object.values(manifest.nodes || {}), ...Object.values(manifest.sources || {})],
         projectName: manifest.metadata?.project_name || 'Demo Project',
         generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
       };
+
+      console.log('Parsed nodes count:', parsed.nodes.length);
+      console.log('Building graph...');
+
       const { nodes, edges } = buildGraph(parsed.nodes);
+
+      console.log('Graph built - nodes:', nodes.length, 'edges:', edges.length);
+      console.log('Setting graph store...');
+
       setGraph(nodes, edges, parsed);
+
+      console.log('Navigating to /visualize...');
       router.push('/visualize');
+      console.log('=== DEMO LOADING COMPLETE ===');
     } catch (err) {
+      console.error('❌ Demo loading error:', err);
+      console.error('Error type:', typeof err);
+      console.error('Error name:', err instanceof Error ? err.name : 'unknown');
+      console.error('Error message:', err instanceof Error ? err.message : String(err));
+      console.error('Error stack:', err instanceof Error ? err.stack : 'no stack');
       setError(err instanceof Error ? err.message : 'Failed to load demo manifest');
     } finally {
+      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };
