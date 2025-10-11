@@ -36,7 +36,10 @@ export default function Home() {
 
     try {
       // Load the demo test.json from public folder
-      const response = await fetch('/test.json');
+      // Use relative path from current location to handle basePath in production
+      const basePath = window.location.pathname.split('/').slice(0, -1).join('/') || '';
+      const testJsonPath = basePath ? `${basePath}/test.json` : '/test.json';
+      const response = await fetch(testJsonPath);
       if (!response.ok) throw new Error('Failed to load demo manifest');
       const manifest = await response.json() as DbtManifest;
       const parsed = {
