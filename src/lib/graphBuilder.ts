@@ -1,5 +1,6 @@
 import dagre from 'dagre';
 import type { Node, Edge } from 'reactflow';
+import { MarkerType } from 'reactflow';
 import type { DbtNode } from './manifestParser';
 
 export type GraphNode = Node<{
@@ -111,7 +112,7 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
             type: 'smoothstep',
             animated: false,
             markerEnd: {
-              type: 'arrowclosed',
+              type: MarkerType.ArrowClosed,
               color: '#64748b',
             },
             style: { stroke: '#64748b', strokeWidth: 2 },

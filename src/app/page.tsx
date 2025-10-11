@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchManifest, parseManifestFile } from '@/lib/manifestParser';
+import { fetchManifest, parseManifestFile, type DbtManifest } from '@/lib/manifestParser';
 import { buildGraph } from '@/lib/graphBuilder';
 import { useGraphStore } from '@/store/useGraphStore';
 
@@ -22,7 +22,7 @@ export default function Home() {
       // TODO: Remove this dev override before release - uses local test.json
       const response = await fetch('/test.json');
       if (!response.ok) throw new Error('Failed to load test manifest');
-      const manifest = await response.json();
+      const manifest = await response.json() as DbtManifest;
       const parsed = {
         nodes: [...Object.values(manifest.nodes || {}), ...Object.values(manifest.sources || {})],
         projectName: manifest.metadata?.project_name || 'Test Project',

@@ -9,6 +9,7 @@ import ReactFlow, {
   useReactFlow,
   applyNodeChanges,
   applyEdgeChanges,
+  MarkerType,
   type NodeMouseHandler,
   type Node,
   type Edge,
@@ -274,7 +275,7 @@ function LineageGraphInner() {
       opacity: highlightedEdges.size === 0 || highlightedEdges.has(edge.id) ? 1 : 0.2,
     },
     markerEnd: {
-      type: 'arrowclosed',
+      type: MarkerType.ArrowClosed,
       color: highlightedEdges.has(edge.id) ? '#3b82f6' : '#64748b',
     },
     animated: highlightedEdges.has(edge.id),
