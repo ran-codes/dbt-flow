@@ -1,9 +1,7 @@
-with source as (
+with
 
-    {#-
-    Normally we would select from the table here, but we are using seeds to load
-    our data in this project
-    #}
+source as (
+
     select * from {{ ref('raw_customers') }}
 
 ),
@@ -11,9 +9,12 @@ with source as (
 renamed as (
 
     select
+
+        ----------  ids
         id as customer_id,
-        first_name,
-        last_name
+
+        ---------- text
+        name as customer_name
 
     from source
 

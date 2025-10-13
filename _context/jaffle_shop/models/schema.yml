@@ -17,20 +17,20 @@ models:
       - name: last_name
         description: Customer's last name. PII.
 
-      - name: first_order
+      - name: first_ordered_at
         description: Date (UTC) of a customer's first order
 
-      - name: most_recent_order
+      - name: last_ordered_at
         description: Date (UTC) of a customer's most recent order
 
-      - name: number_of_orders
+      - name: count_lifetime_orders
         description: Count of the number of orders a customer has placed
 
-      - name: total_order_amount
-        description: Total value (AUD) of a customer's orders
+      - name: lifetime_spend
+        description: Total value of a customer's orders
 
   - name: orders
-    description: This table has basic information about orders, as well as some derived facts based on payments
+    description: This table has basic information about orders, as well as some derived facts based on order items
 
     columns:
       - name: order_id
@@ -43,40 +43,21 @@ models:
         description: Foreign key to the customers table
         tests:
           - not_null
-          - relationships:
-              to: ref('customers')
-              field: customer_id
 
-      - name: order_date
+      - name: ordered_at
         description: Date (UTC) that the order was placed
 
-      - name: status
-        description: '{{ doc("orders_status") }}'
-        tests:
-          - accepted_values:
-              values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
+      - name: order_cost
+        description: Cost of supplies for the order
 
-      - name: amount
-        description: Total amount (AUD) of the order
-        tests:
-          - not_null
+      - name: order_items_subtotal
+        description: Total of order items
 
-      - name: credit_card_amount
-        description: Amount of the order (AUD) paid for by credit card
-        tests:
-          - not_null
+      - name: count_food_items
+        description: Count of food items in order
 
-      - name: coupon_amount
-        description: Amount of the order (AUD) paid for by coupon
-        tests:
-          - not_null
+      - name: count_drink_items
+        description: Count of drink items in order
 
-      - name: bank_transfer_amount
-        description: Amount of the order (AUD) paid for by bank transfer
-        tests:
-          - not_null
-
-      - name: gift_card_amount
-        description: Amount of the order (AUD) paid for by gift card
-        tests:
-          - not_null
+      - name: count_order_items
+        description: Total count of items in order

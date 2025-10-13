@@ -14,18 +14,31 @@ models:
         tests:
           - unique
           - not_null
-      - name: status
-        tests:
-          - accepted_values:
-              values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
 
-  - name: stg_payments
+  - name: stg_locations
     columns:
-      - name: payment_id
+      - name: location_id
         tests:
           - unique
           - not_null
-      - name: payment_method
+
+  - name: stg_order_items
+    columns:
+      - name: order_item_id
         tests:
-          - accepted_values:
-              values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
+          - unique
+          - not_null
+
+  - name: stg_products
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_supplies
+    columns:
+      - name: supply_uuid
+        tests:
+          - unique
+          - not_null
