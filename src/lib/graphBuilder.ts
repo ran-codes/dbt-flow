@@ -37,9 +37,10 @@ export const nodeColors: Record<string, string> = {
  * Color scheme for inferred tags (data layers)
  */
 export const inferredTagColors: Record<string, string> = {
-  staging: '#10b981',      // green - raw data layer
-  intermediate: '#8b5cf6', // purple - transformation layer
-  mart: '#ec4899',         // pink - consumption layer
+  raw: '#f59e0b',          // amber - raw seed data
+  staging: '#10b981',      // green - staging transformations
+  intermediate: '#8b5cf6', // purple - intermediate transformations
+  mart: '#ec4899',         // pink - final marts/consumption layer
   base: '#3b82f6',         // blue - other/unclassified
   default: '#6b7280',      // gray - fallback
 };
@@ -60,16 +61,20 @@ export function getNodeColor(resourceType: string, inferredTags?: string[]): str
  * Infer tags from model name based on common dbt naming conventions
  * Supports multiple naming patterns:
  * - SALURBAL style: int__, mart__ prefixes
- * - Jaffle Shop style: stg_, fct_, dim_ prefixes
- * - Generic: raw_, base_, staging_, intermediate_, mart_
+ * - Jaffle Shop style: raw_, stg_, fct_, dim_ prefixes
+ * - Generic: base_, staging_, intermediate_, mart_
  */
 function inferTagsFromName(name: string): string[] {
   const lowerName = name.toLowerCase();
 
-  // Staging layer (raw data transformations)
+  // Raw layer (seeds, raw data sources)
+  if (lowerName.startsWith('raw_')) {
+    return ['raw'];
+  }
+
+  // Staging layer (initial transformations from raw)
   if (lowerName.startsWith('stg_') ||
-      lowerName.startsWith('staging_') ||
-      lowerName.startsWith('raw_')) {
+      lowerName.startsWith('staging_')) {
     return ['staging'];
   }
 
@@ -88,7 +93,7 @@ function inferTagsFromName(name: string): string[] {
     return ['mart'];
   }
 
-  // Base/other
+  // Base/other (models without clear layer prefix)
   return ['base'];
 }
 

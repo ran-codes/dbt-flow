@@ -30,75 +30,50 @@ export default function Home() {
     }
   };
 
-  const handleDemoClick = async () => {
-    console.log('=== DEMO BUTTON CLICKED ===');
-    console.log('window.location.href:', window.location.href);
-    console.log('window.location.origin:', window.location.origin);
-    console.log('window.location.pathname:', window.location.pathname);
+  const handleDemoClick = async (manifestFileName: string, projectName: string) => {
+    console.log(`=== DEMO BUTTON CLICKED: ${projectName} ===`);
+    console.log('Manifest file:', manifestFileName);
 
     setError('');
     setIsLoading(true);
 
     try {
-      // Load the demo test.json from public folder
-      // Use window.location.origin + pathname to construct full URL that works with basePath
+      // Load the demo manifest from public folder
       const currentPath = window.location.pathname.endsWith('/')
         ? window.location.pathname.slice(0, -1)
         : window.location.pathname;
 
-      console.log('currentPath (after processing):', currentPath);
+      const manifestUrl = `${window.location.origin}${currentPath}/${manifestFileName}`;
+      console.log('Fetching:', manifestUrl);
 
-      const testJsonUrl = `${window.location.origin}${currentPath}/manifest_jaffle_active_v0_0_1.json`;
-      console.log('Constructed testJsonUrl:', testJsonUrl);
-      console.log('Starting fetch...');
-
-      const response = await fetch(testJsonUrl);
-      console.log('Fetch response received');
-      console.log('Response status:', response.status);
-      console.log('Response statusText:', response.statusText);
-      console.log('Response ok:', response.ok);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      const response = await fetch(manifestUrl);
 
       if (!response.ok) {
-        console.error('❌ Failed to fetch - response not ok');
-        throw new Error(`Failed to load demo manifest (${response.status}: ${response.statusText})`);
+        throw new Error(`Failed to load ${projectName} demo (${response.status}: ${response.statusText})`);
       }
 
-      console.log('Parsing JSON...');
       const manifest = await response.json() as DbtManifest;
       console.log('✅ Demo manifest loaded successfully');
-      console.log('Manifest keys:', Object.keys(manifest));
-      console.log('Manifest.nodes count:', Object.keys(manifest.nodes || {}).length);
-      console.log('Manifest.sources count:', Object.keys(manifest.sources || {}).length);
 
       const parsed = {
-        nodes: [...Object.values(manifest.nodes || {}), ...Object.values(manifest.sources || {})],
-        projectName: manifest.metadata?.project_name || 'Demo Project',
+        nodes: [
+          ...Object.values(manifest.nodes || {}),
+          ...Object.values(manifest.sources || {}),
+          ...Object.values(manifest.seeds || {})
+        ],
+        projectName: manifest.metadata?.project_name || projectName,
         generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
       };
 
-      console.log('Parsed nodes count:', parsed.nodes.length);
-      console.log('Building graph...');
-
       const { nodes, edges } = buildGraph(parsed.nodes);
-
       console.log('Graph built - nodes:', nodes.length, 'edges:', edges.length);
-      console.log('Setting graph store...');
 
       setGraph(nodes, edges, parsed);
-
-      console.log('Navigating to /visualize...');
       router.push('/visualize');
-      console.log('=== DEMO LOADING COMPLETE ===');
     } catch (err) {
       console.error('❌ Demo loading error:', err);
-      console.error('Error type:', typeof err);
-      console.error('Error name:', err instanceof Error ? err.name : 'unknown');
-      console.error('Error message:', err instanceof Error ? err.message : String(err));
-      console.error('Error stack:', err instanceof Error ? err.stack : 'no stack');
-      setError(err instanceof Error ? err.message : 'Failed to load demo manifest');
+      setError(err instanceof Error ? err.message : `Failed to load ${projectName} demo`);
     } finally {
-      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };
@@ -178,52 +153,78 @@ export default function Home() {
             </form>
           </div>
 
-          {/* Demo and File Upload Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Demo Button */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-8 border border-blue-100">
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-700 mb-2">
-                  Try the Demo
-                </p>
-                <p className="text-xs text-slate-600 mb-4">
-                  Explore a sample SALURBAL mortality data warehouse
-                </p>
-                <button
-                  onClick={handleDemoClick}
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-400 disabled:to-indigo-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
-                >
-                  {isLoading ? 'Loading...' : 'View Demo'}
-                </button>
+          {/* Demo Options */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">
+              Try Sample Projects
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Jaffle Shop Demo */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-lg p-6 border border-green-100">
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🥪</div>
+                  <p className="text-sm font-semibold text-slate-700 mb-2">
+                    Jaffle Shop
+                  </p>
+                  <p className="text-xs text-slate-600 mb-4">
+                    Classic dbt tutorial project with staging & marts
+                  </p>
+                  <button
+                    onClick={() => handleDemoClick('manifest_jaffle_active_v0_0_1.json', 'Jaffle Shop')}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-green-400 disabled:to-emerald-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                  >
+                    {isLoading ? 'Loading...' : 'View Jaffle Shop'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mortality Records Demo */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 border border-blue-100">
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🏥</div>
+                  <p className="text-sm font-semibold text-slate-700 mb-2">
+                    Mortality Records
+                  </p>
+                  <p className="text-xs text-slate-600 mb-4">
+                    SALURBAL mortality data warehouse with custom layers
+                  </p>
+                  <button
+                    onClick={() => handleDemoClick('test.json', 'SALURBAL Mortality')}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-400 disabled:to-indigo-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                  >
+                    {isLoading ? 'Loading...' : 'View Mortality Data'}
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* File Upload */}
-            <div className="bg-white rounded-lg shadow-lg p-8 border border-slate-200">
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-700 mb-2">
-                  Upload File
-                </p>
-                <p className="text-xs text-slate-600 mb-4">
-                  Use your own manifest.json file
-                </p>
-                <label className="inline-block cursor-pointer w-full">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    disabled={isLoading}
-                    className="hidden"
-                  />
-                  <span className="block bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors">
-                    Choose File
-                  </span>
-                </label>
-                <p className="mt-2 text-xs text-slate-500">
-                  Fallback if CORS blocks URL fetching
-                </p>
-              </div>
+          {/* File Upload Option */}
+          <div className="bg-white rounded-lg shadow-lg p-8 border border-slate-200">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-slate-700 mb-2">
+                Upload Your Own Manifest
+              </p>
+              <p className="text-xs text-slate-600 mb-4">
+                Use your own manifest.json file to visualize your dbt project
+              </p>
+              <label className="inline-block cursor-pointer w-full">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
+                  className="hidden"
+                />
+                <span className="block bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors">
+                  Choose File
+                </span>
+              </label>
+              <p className="mt-2 text-xs text-slate-500">
+                Fallback option if CORS blocks URL fetching
+              </p>
             </div>
           </div>
 
