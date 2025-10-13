@@ -19,21 +19,86 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // TODO: Remove this dev override before release - uses local test.json
-      const response = await fetch('/test.json');
-      if (!response.ok) throw new Error('Failed to load test manifest');
-      const manifest = await response.json() as DbtManifest;
-      const parsed = {
-        nodes: [...Object.values(manifest.nodes || {}), ...Object.values(manifest.sources || {})],
-        projectName: manifest.metadata?.project_name || 'Test Project',
-        generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
-      };
-      const { nodes, edges } = buildGraph(parsed.nodes);
-      setGraph(nodes, edges, parsed);
+      const manifest = await fetchManifest(url);
+      const { nodes, edges } = buildGraph(manifest.nodes);
+      setGraph(nodes, edges, manifest);
       router.push('/visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse manifest');
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoClick = async () => {
+    console.log('=== DEMO BUTTON CLICKED ===');
+    console.log('window.location.href:', window.location.href);
+    console.log('window.location.origin:', window.location.origin);
+    console.log('window.location.pathname:', window.location.pathname);
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      // Load the demo test.json from public folder
+      // Use window.location.origin + pathname to construct full URL that works with basePath
+      const currentPath = window.location.pathname.endsWith('/')
+        ? window.location.pathname.slice(0, -1)
+        : window.location.pathname;
+
+      console.log('currentPath (after processing):', currentPath);
+
+      const testJsonUrl = `${window.location.origin}${currentPath}/test.json`;
+      console.log('Constructed testJsonUrl:', testJsonUrl);
+      console.log('Starting fetch...');
+
+      const response = await fetch(testJsonUrl);
+      console.log('Fetch response received');
+      console.log('Response status:', response.status);
+      console.log('Response statusText:', response.statusText);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.error('❌ Failed to fetch - response not ok');
+        throw new Error(`Failed to load demo manifest (${response.status}: ${response.statusText})`);
+      }
+
+      console.log('Parsing JSON...');
+      const manifest = await response.json() as DbtManifest;
+      console.log('✅ Demo manifest loaded successfully');
+      console.log('Manifest keys:', Object.keys(manifest));
+      console.log('Manifest.nodes count:', Object.keys(manifest.nodes || {}).length);
+      console.log('Manifest.sources count:', Object.keys(manifest.sources || {}).length);
+
+      const parsed = {
+        nodes: [...Object.values(manifest.nodes || {}), ...Object.values(manifest.sources || {})],
+        projectName: manifest.metadata?.project_name || 'Demo Project',
+        generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
+      };
+
+      console.log('Parsed nodes count:', parsed.nodes.length);
+      console.log('Building graph...');
+
+      const { nodes, edges } = buildGraph(parsed.nodes);
+
+      console.log('Graph built - nodes:', nodes.length, 'edges:', edges.length);
+      console.log('Setting graph store...');
+
+      setGraph(nodes, edges, parsed);
+
+      console.log('Navigating to /visualize...');
+      router.push('/visualize');
+      console.log('=== DEMO LOADING COMPLETE ===');
+    } catch (err) {
+      console.error('❌ Demo loading error:', err);
+      console.error('Error type:', typeof err);
+      console.error('Error name:', err instanceof Error ? err.name : 'unknown');
+      console.error('Error message:', err instanceof Error ? err.message : String(err));
+      console.error('Error stack:', err instanceof Error ? err.stack : 'no stack');
+      setError(err instanceof Error ? err.message : 'Failed to load demo manifest');
+    } finally {
+      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };
@@ -113,27 +178,52 @@ export default function Home() {
             </form>
           </div>
 
-          {/* File Upload */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-slate-700 mb-4">
-                Or upload your manifest.json file
-              </p>
-              <label className="inline-block cursor-pointer">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileUpload}
+          {/* Demo and File Upload Options */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Demo Button */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-8 border border-blue-100">
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-700 mb-2">
+                  Try the Demo
+                </p>
+                <p className="text-xs text-slate-600 mb-4">
+                  Explore a sample SALURBAL mortality data warehouse
+                </p>
+                <button
+                  onClick={handleDemoClick}
                   disabled={isLoading}
-                  className="hidden"
-                />
-                <span className="inline-block bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors">
-                  Choose File
-                </span>
-              </label>
-              <p className="mt-2 text-xs text-slate-500">
-                Fallback option if CORS blocks URL fetching
-              </p>
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-400 disabled:to-indigo-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                >
+                  {isLoading ? 'Loading...' : 'View Demo'}
+                </button>
+              </div>
+            </div>
+
+            {/* File Upload */}
+            <div className="bg-white rounded-lg shadow-lg p-8 border border-slate-200">
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-700 mb-2">
+                  Upload File
+                </p>
+                <p className="text-xs text-slate-600 mb-4">
+                  Use your own manifest.json file
+                </p>
+                <label className="inline-block cursor-pointer w-full">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    disabled={isLoading}
+                    className="hidden"
+                  />
+                  <span className="block bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors">
+                    Choose File
+                  </span>
+                </label>
+                <p className="mt-2 text-xs text-slate-500">
+                  Fallback if CORS blocks URL fetching
+                </p>
+              </div>
             </div>
           </div>
 
