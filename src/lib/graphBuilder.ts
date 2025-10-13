@@ -34,13 +34,14 @@ export const nodeColors: Record<string, string> = {
 };
 
 /**
- * Color scheme for inferred tags
+ * Color scheme for inferred tags (data layers)
  */
 export const inferredTagColors: Record<string, string> = {
-  int: '#8b5cf6',        // purple
-  mart: '#ec4899',       // pink
-  base: '#3b82f6',       // blue
-  default: '#6b7280',    // gray
+  staging: '#10b981',      // green - raw data layer
+  intermediate: '#8b5cf6', // purple - transformation layer
+  mart: '#ec4899',         // pink - consumption layer
+  base: '#3b82f6',         // blue - other/unclassified
+  default: '#6b7280',      // gray - fallback
 };
 
 /**
@@ -56,17 +57,39 @@ export function getNodeColor(resourceType: string, inferredTags?: string[]): str
 }
 
 /**
- * Infer tags from model name based on prefix
+ * Infer tags from model name based on common dbt naming conventions
+ * Supports multiple naming patterns:
+ * - SALURBAL style: int__, mart__ prefixes
+ * - Jaffle Shop style: stg_, fct_, dim_ prefixes
+ * - Generic: raw_, base_, staging_, intermediate_, mart_
  */
 function inferTagsFromName(name: string): string[] {
   const lowerName = name.toLowerCase();
-  if (lowerName.startsWith('int__')) {
-    return ['int'];
-  } else if (lowerName.startsWith('mart__')) {
-    return ['mart'];
-  } else {
-    return ['base'];
+
+  // Staging layer (raw data transformations)
+  if (lowerName.startsWith('stg_') ||
+      lowerName.startsWith('staging_') ||
+      lowerName.startsWith('raw_')) {
+    return ['staging'];
   }
+
+  // Intermediate layer (business logic transformations)
+  if (lowerName.startsWith('int_') ||
+      lowerName.startsWith('int__') ||
+      lowerName.startsWith('intermediate_')) {
+    return ['intermediate'];
+  }
+
+  // Mart layer (final models for consumption)
+  if (lowerName.startsWith('mart_') ||
+      lowerName.startsWith('mart__') ||
+      lowerName.startsWith('fct_') ||
+      lowerName.startsWith('dim_')) {
+    return ['mart'];
+  }
+
+  // Base/other
+  return ['base'];
 }
 
 /**

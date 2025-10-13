@@ -48,7 +48,7 @@ export default function Home() {
 
       console.log('currentPath (after processing):', currentPath);
 
-      const testJsonUrl = `${window.location.origin}${currentPath}/test.json`;
+      const testJsonUrl = `${window.location.origin}${currentPath}/manifest_jaffle_active_v0_0_1.json`;
       console.log('Constructed testJsonUrl:', testJsonUrl);
       console.log('Starting fetch...');
 
