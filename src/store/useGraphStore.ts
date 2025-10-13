@@ -43,7 +43,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
   generatedAt: '',
   searchQuery: '',
   selectedNode: null,
-  resourceTypeFilters: new Set(['model']), // Default: show only models
+  resourceTypeFilters: new Set(['model', 'seed']), // Default: show models and seeds
   tagFilters: new Set(), // Default: no tag filters
   tagFilterMode: 'OR', // Default: OR logic
   inferredTagFilters: new Set(), // Default: no inferred tag filters
@@ -51,13 +51,11 @@ export const useGraphStore = create<GraphStore>((set) => ({
 
   // Actions
   setGraph: (nodes, edges, manifest) => {
-    // Extract all unique inferred tags from nodes, excluding 'base'
+    // Extract all unique inferred tags from nodes, including 'base'
     const inferredTagSet = new Set<string>();
     nodes.forEach((node) => {
       node.data.inferredTags?.forEach((tag) => {
-        if (tag !== 'base') {
-          inferredTagSet.add(tag);
-        }
+        inferredTagSet.add(tag);
       });
     });
 
@@ -66,7 +64,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       edges,
       projectName: manifest.projectName,
       generatedAt: manifest.generatedAt,
-      inferredTagFilters: inferredTagSet, // Initialize with all inferred tags except 'base'
+      inferredTagFilters: inferredTagSet, // Initialize with all inferred tags including 'base'
     });
   },
 
@@ -146,7 +144,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       generatedAt: '',
       searchQuery: '',
       selectedNode: null,
-      resourceTypeFilters: new Set(['model']),
+      resourceTypeFilters: new Set(['model', 'seed']),
       tagFilters: new Set(),
       tagFilterMode: 'OR',
       inferredTagFilters: new Set(),

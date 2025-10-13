@@ -16,6 +16,7 @@ export type DbtNode = {
 export type DbtManifest = {
   nodes: Record<string, DbtNode>;
   sources: Record<string, DbtNode>;
+  seeds?: Record<string, DbtNode>;
   metrics?: Record<string, any>;
   exposures?: Record<string, any>;
   metadata: {
@@ -100,6 +101,7 @@ export function parseManifest(manifest: DbtManifest): ParsedManifest {
   const allNodes = [
     ...Object.values(manifest.nodes || {}),
     ...Object.values(manifest.sources || {}),
+    ...Object.values(manifest.seeds || {}),
   ];
 
   if (allNodes.length === 0) {
