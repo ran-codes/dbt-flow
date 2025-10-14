@@ -369,7 +369,7 @@ function LineageGraphInner() {
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Inferred Layer</h4>
               <div className="flex flex-wrap gap-2">
-                {selectedNode.data.inferredTags.map((tag) => (
+                {selectedNode.data.inferredTags.map((tag: string) => (
                   <span
                     key={tag}
                     className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-md font-medium"
@@ -385,7 +385,7 @@ function LineageGraphInner() {
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Tags</h4>
               <div className="flex flex-wrap gap-2">
-                {selectedNode.data.tags.map((tag) => (
+                {selectedNode.data.tags.map((tag: string) => (
                   <span
                     key={tag}
                     className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-md font-medium"

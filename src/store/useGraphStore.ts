@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import type { GraphNode, GraphEdge } from '@/lib/graphBuilder';
 import type { ParsedManifest } from '@/lib/manifestParser';
+import { filterNodes } from '@/lib/graphBuilder';
+
+export interface ExportedNode {
+  id: string;
+  name: string;
+  type: string;
+  inferredLayer: string | null;
+  database?: string;
+  schema?: string;
+  description?: string;
+  tags: string[];
+}
 
 export type GraphStore = {
   // Graph data
@@ -33,9 +45,11 @@ export type GraphStore = {
   toggleInferredTag: (tag: string) => void;
   setInferredTagFilterMode: (mode: 'AND' | 'OR') => void;
   clearGraph: () => void;
+  exportNodesData: (nodesToExport?: GraphNode[]) => ExportedNode[];
+  getFilteredNodes: () => GraphNode[];
 };
 
-export const useGraphStore = create<GraphStore>((set) => ({
+export const useGraphStore = create<GraphStore>((set, get) => ({
   // Initial state
   nodes: [],
   edges: [],
@@ -150,4 +164,35 @@ export const useGraphStore = create<GraphStore>((set) => ({
       inferredTagFilters: new Set(),
       inferredTagFilterMode: 'OR',
     }),
+
+  exportNodesData: (nodesToExport) => {
+    const state = get();
+    const nodes = nodesToExport || state.nodes;
+    return nodes.map((node) => ({
+      id: node.id,
+      name: node.data.label,
+      type: node.data.type,
+      inferredLayer: node.data.inferredTags?.[0] || null,
+      database: node.data.database,
+      schema: node.data.schema,
+      description: node.data.description,
+      tags: node.data.tags || [],
+    }));
+  },
+
+  getFilteredNodes: () => {
+    const state = get();
+    const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters } = state;
+    const filtered = filterNodes(
+      nodes,
+      edges,
+      searchQuery,
+      resourceTypeFilters,
+      tagFilters,
+      tagFilterMode,
+      inferredTagFilters,
+      'OR'
+    );
+    return filtered.nodes;
+  },
 }));
