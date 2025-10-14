@@ -33,6 +33,7 @@ export type GraphStore = {
   toggleInferredTag: (tag: string) => void;
   setInferredTagFilterMode: (mode: 'AND' | 'OR') => void;
   clearGraph: () => void;
+  exportNodesData: () => any[];
 };
 
 export const useGraphStore = create<GraphStore>((set) => ({
@@ -150,4 +151,18 @@ export const useGraphStore = create<GraphStore>((set) => ({
       inferredTagFilters: new Set(),
       inferredTagFilterMode: 'OR',
     }),
+
+  exportNodesData: () => {
+    const state = useGraphStore.getState();
+    return state.nodes.map((node) => ({
+      id: node.id,
+      name: node.data.label,
+      type: node.data.type,
+      inferredLayer: node.data.inferredTags?.[0] || null,
+      database: node.data.database,
+      schema: node.data.schema,
+      description: node.data.description,
+      tags: node.data.tags || [],
+    }));
+  },
 }));

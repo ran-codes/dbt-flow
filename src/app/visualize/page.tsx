@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useGraphStore } from '@/store/useGraphStore';
+import ExportModal from '@/components/ExportModal';
 
 // Import LineageGraph dynamically to avoid SSR issues with ReactFlow
 const LineageGraph = dynamic(() => import('@/components/LineageGraph'), {
@@ -17,8 +18,10 @@ const LineageGraph = dynamic(() => import('@/components/LineageGraph'), {
 
 export default function VisualizePage() {
   const router = useRouter();
-  const { nodes, projectName, searchQuery, setSearchQuery } = useGraphStore();
+  const { nodes, projectName, searchQuery, setSearchQuery, exportNodesData } = useGraphStore();
   const [mounted, setMounted] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportData, setExportData] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -30,6 +33,12 @@ export default function VisualizePage() {
       router.push('/');
     }
   }, [mounted, nodes.length, router]);
+
+  const handleExportClick = () => {
+    const data = exportNodesData();
+    setExportData(data);
+    setIsExportModalOpen(true);
+  };
 
   if (!mounted || nodes.length === 0) {
     return null;
@@ -64,25 +73,16 @@ export default function VisualizePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Legend */}
-          <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
-              <span className="text-slate-600">Model</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-[#10b981]"></div>
-              <span className="text-slate-600">Source</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-[#f59e0b]"></div>
-              <span className="text-slate-600">Test</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-[#8b5cf6]"></div>
-              <span className="text-slate-600">Seed</span>
-            </div>
-          </div>
+          {/* Export Data Button */}
+          <button
+            onClick={handleExportClick}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Data
+          </button>
         </div>
       </header>
 
@@ -90,6 +90,13 @@ export default function VisualizePage() {
       <div className="flex-1 relative overflow-hidden" style={{ height: 'calc(100vh - 4.5rem - 3.5rem)' }}>
         <LineageGraph />
       </div>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        data={exportData}
+      />
     </div>
   );
 }
