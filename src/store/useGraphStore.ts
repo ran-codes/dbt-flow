@@ -33,7 +33,8 @@ export type GraphStore = {
   toggleInferredTag: (tag: string) => void;
   setInferredTagFilterMode: (mode: 'AND' | 'OR') => void;
   clearGraph: () => void;
-  exportNodesData: () => any[];
+  exportNodesData: (nodesToExport?: GraphNode[]) => any[];
+  getFilteredNodes: () => GraphNode[];
 };
 
 export const useGraphStore = create<GraphStore>((set) => ({
@@ -152,9 +153,10 @@ export const useGraphStore = create<GraphStore>((set) => ({
       inferredTagFilterMode: 'OR',
     }),
 
-  exportNodesData: () => {
+  exportNodesData: (nodesToExport) => {
     const state = useGraphStore.getState();
-    return state.nodes.map((node) => ({
+    const nodes = nodesToExport || state.nodes;
+    return nodes.map((node) => ({
       id: node.id,
       name: node.data.label,
       type: node.data.type,
@@ -164,5 +166,21 @@ export const useGraphStore = create<GraphStore>((set) => ({
       description: node.data.description,
       tags: node.data.tags || [],
     }));
+  },
+
+  getFilteredNodes: () => {
+    const state = useGraphStore.getState();
+    const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters } = state;
+    const filtered = require('@/lib/graphBuilder').filterNodes(
+      nodes,
+      edges,
+      searchQuery,
+      resourceTypeFilters,
+      tagFilters,
+      tagFilterMode,
+      inferredTagFilters,
+      'OR'
+    );
+    return filtered.nodes;
   },
 }));

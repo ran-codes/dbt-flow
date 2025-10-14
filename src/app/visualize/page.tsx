@@ -18,7 +18,7 @@ const LineageGraph = dynamic(() => import('@/components/LineageGraph'), {
 
 export default function VisualizePage() {
   const router = useRouter();
-  const { nodes, projectName, searchQuery, setSearchQuery, exportNodesData } = useGraphStore();
+  const { nodes, projectName, searchQuery, setSearchQuery, exportNodesData, getFilteredNodes } = useGraphStore();
   const [mounted, setMounted] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportData, setExportData] = useState<any[]>([]);
@@ -35,7 +35,9 @@ export default function VisualizePage() {
   }, [mounted, nodes.length, router]);
 
   const handleExportClick = () => {
-    const data = exportNodesData();
+    // Get currently filtered nodes based on all active filters
+    const filteredNodes = getFilteredNodes();
+    const data = exportNodesData(filteredNodes);
     setExportData(data);
     setIsExportModalOpen(true);
   };
