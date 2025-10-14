@@ -279,7 +279,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">
               Try Sample Projects
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Jaffle Shop Demo */}
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-lg p-6 border border-green-100">
                 <div className="text-center">
@@ -295,27 +295,47 @@ export default function Home() {
                     disabled={isLoading}
                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-green-400 disabled:to-emerald-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
                   >
-                    {isLoading ? 'Loading...' : 'View Jaffle Shop'}
+                    {isLoading ? 'Loading...' : 'View Project'}
                   </button>
                 </div>
               </div>
 
-              {/* Mortality Records Demo */}
+              {/* Data Warehouse Demo */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 border border-blue-100">
                 <div className="text-center">
-                  <div className="text-3xl mb-2">🏥</div>
+                  <div className="text-3xl mb-2">🏢</div>
                   <p className="text-sm font-semibold text-slate-700 mb-2">
-                    Mortality Records
+                    Data Warehouse
                   </p>
                   <p className="text-xs text-slate-600 mb-4">
-                    SALURBAL mortality data warehouse with custom layers
+                    Production data warehouse with custom layers
                   </p>
                   <button
-                    onClick={() => handleDemoClick('test.json', 'SALURBAL Mortality')}
+                    onClick={() => handleDemoClick('test.json', 'Data Warehouse')}
                     disabled={isLoading}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-400 disabled:to-indigo-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
                   >
-                    {isLoading ? 'Loading...' : 'View Mortality Data'}
+                    {isLoading ? 'Loading...' : 'View Project'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Lakehouse Demo */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border border-purple-100">
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🏠</div>
+                  <p className="text-sm font-semibold text-slate-700 mb-2">
+                    Lakehouse
+                  </p>
+                  <p className="text-xs text-slate-600 mb-4">
+                    Modern lakehouse architecture with multi-layer design
+                  </p>
+                  <button
+                    onClick={() => handleDemoClick('manifest_salurbal_api_v1_2_2.json', 'Lakehouse')}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                  >
+                    {isLoading ? 'Loading...' : 'View Project'}
                   </button>
                 </div>
               </div>

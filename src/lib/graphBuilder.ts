@@ -37,12 +37,15 @@ export const nodeColors: Record<string, string> = {
  * Color scheme for inferred tags (data layers)
  */
 export const inferredTagColors: Record<string, string> = {
-  raw: '#f59e0b',          // amber - raw seed data
-  staging: '#10b981',      // green - staging transformations
-  intermediate: '#8b5cf6', // purple - intermediate transformations
-  mart: '#ec4899',         // pink - final marts/consumption layer
-  base: '#3b82f6',         // blue - other/unclassified
-  default: '#6b7280',      // gray - fallback
+  raw: '#f59e0b',              // amber - raw seed data
+  staging: '#10b981',          // green - staging transformations
+  base: '#3b82f6',             // blue - base layer with date patterns
+  intermediate: '#8b5cf6',     // purple - intermediate transformations
+  core: '#a855f7',             // purple-500 - core business logic
+  'mart-internal': '#ec4899',  // pink - internal marts
+  'mart-public': '#f43f5e',    // rose-500 - public marts
+  mart: '#ec4899',             // pink - general marts
+  default: '#6b7280',          // gray - fallback
 };
 
 /**
@@ -60,12 +63,23 @@ export function getNodeColor(resourceType: string, inferredTags?: string[]): str
 /**
  * Infer tags from model name based on common dbt naming conventions
  * Supports multiple naming patterns:
- * - SALURBAL style: int__, mart__ prefixes
- * - Jaffle Shop style: raw_, stg_, fct_, dim_ prefixes
- * - Generic: base_, staging_, intermediate_, mart_
+ * - Base layer: base__, stage__, or contains 8 consecutive digits (########)
+ * - Staging layer: stg_, staging_, raw_
+ * - Intermediate layer: int_, int__, intermediate_
+ * - Core layer: core__
+ * - Mart layers: internal__, public__, mart_, mart__, fct_, dim_
+ * - Default: mart (everything else)
  */
 function inferTagsFromName(name: string): string[] {
   const lowerName = name.toLowerCase();
+
+  // Base layer - has base__, stage__ prefix, or contains 8 consecutive digits
+  const hasEightDigits = /\d{8}/.test(name);
+  if (lowerName.startsWith('base__') ||
+      lowerName.startsWith('stage__') ||
+      hasEightDigits) {
+    return ['base'];
+  }
 
   // Raw layer (seeds, raw data sources)
   if (lowerName.startsWith('raw_')) {
@@ -85,7 +99,22 @@ function inferTagsFromName(name: string): string[] {
     return ['intermediate'];
   }
 
-  // Mart layer (final models for consumption)
+  // Core layer (core business logic)
+  if (lowerName.startsWith('core__')) {
+    return ['core'];
+  }
+
+  // Mart layer - Internal (internal consumption)
+  if (lowerName.startsWith('internal__')) {
+    return ['mart-internal'];
+  }
+
+  // Mart layer - Public (external consumption)
+  if (lowerName.startsWith('public__')) {
+    return ['mart-public'];
+  }
+
+  // Mart layer - General marts
   if (lowerName.startsWith('mart_') ||
       lowerName.startsWith('mart__') ||
       lowerName.startsWith('fct_') ||
@@ -93,8 +122,8 @@ function inferTagsFromName(name: string): string[] {
     return ['mart'];
   }
 
-  // Base/other (models without clear layer prefix)
-  return ['base'];
+  // Default: Everything else is mart
+  return ['mart'];
 }
 
 /**
