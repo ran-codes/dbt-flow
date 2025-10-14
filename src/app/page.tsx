@@ -12,6 +12,8 @@ export default function Home() {
   const [url, setUrl] = useState('https://salurbal-mort-datwarehouse-v0-0-3.netlify.app');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [jsonText, setJsonText] = useState('');
+  const [showJsonInput, setShowJsonInput] = useState(false);
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +94,42 @@ export default function Home() {
       router.push('/visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse manifest file');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleJsonPaste = async () => {
+    if (!jsonText.trim()) {
+      setError('Please paste JSON content');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const manifest: DbtManifest = JSON.parse(jsonText);
+
+      const parsed = {
+        nodes: [
+          ...Object.values(manifest.nodes || {}),
+          ...Object.values(manifest.sources || {}),
+          ...Object.values(manifest.seeds || {})
+        ],
+        projectName: manifest.metadata?.project_name || 'Pasted Manifest',
+        generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
+      };
+
+      const { nodes, edges } = buildGraph(parsed.nodes);
+      setGraph(nodes, edges, parsed);
+      router.push('/visualize');
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setError('Invalid JSON format. Please check your pasted content.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to parse manifest');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -201,30 +239,64 @@ export default function Home() {
             </div>
           </div>
 
-          {/* File Upload Option */}
+          {/* Alternative Input Methods */}
           <div className="bg-white rounded-lg shadow-lg p-8 border border-slate-200">
-            <div className="text-center">
+            <div className="text-center mb-6">
               <p className="text-sm font-semibold text-slate-700 mb-2">
-                Upload Your Own Manifest
+                Alternative Input Methods
               </p>
-              <p className="text-xs text-slate-600 mb-4">
-                Use your own manifest.json file to visualize your dbt project
+              <p className="text-xs text-slate-600">
+                Fallback options if CORS blocks URL fetching
               </p>
-              <label className="inline-block cursor-pointer w-full">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileUpload}
+            </div>
+
+            <div className="space-y-4">
+              {/* File Upload */}
+              <div>
+                <label className="inline-block cursor-pointer w-full">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    disabled={isLoading}
+                    className="hidden"
+                  />
+                  <span className="block bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors">
+                    Upload manifest.json File
+                  </span>
+                </label>
+              </div>
+
+              {/* Paste JSON Toggle */}
+              <div>
+                <button
+                  onClick={() => setShowJsonInput(!showJsonInput)}
                   disabled={isLoading}
-                  className="hidden"
-                />
-                <span className="block bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors">
-                  Choose File
-                </span>
-              </label>
-              <p className="mt-2 text-xs text-slate-500">
-                Fallback option if CORS blocks URL fetching
-              </p>
+                  className="w-full bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors"
+                >
+                  {showJsonInput ? 'Hide JSON Input' : 'Paste manifest.json Content'}
+                </button>
+              </div>
+
+              {/* JSON Textarea */}
+              {showJsonInput && (
+                <div className="space-y-3">
+                  <textarea
+                    value={jsonText}
+                    onChange={(e) => setJsonText(e.target.value)}
+                    placeholder='Paste your manifest.json content here...'
+                    disabled={isLoading}
+                    className="w-full h-48 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-xs resize-y"
+                  />
+                  <button
+                    onClick={handleJsonPaste}
+                    disabled={isLoading || !jsonText.trim()}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                  >
+                    {isLoading ? 'Parsing...' : 'Parse JSON'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
