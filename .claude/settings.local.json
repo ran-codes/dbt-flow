@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Read(//c/Users/ranli/AppData/Roaming/Positron/User/**)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(dbt ls:*)",
+      "Bash(dbt clean:*)",
+      "Bash(cat:*)",
+      "Bash(python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
