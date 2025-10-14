@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useGraphStore } from '@/store/useGraphStore';
-import { nodeColors } from '@/lib/graphBuilder';
+import { nodeColors, type GraphNode } from '@/lib/graphBuilder';
 
 const RESOURCE_TYPES = [
   { type: 'model', label: 'Models', color: nodeColors.model },
@@ -30,7 +30,7 @@ export default function FilterBar() {
   // Extract all unique tags from nodes
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
-    nodes.forEach((node) => {
+    nodes.forEach((node: GraphNode) => {
       node.data.tags?.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet).sort();
@@ -39,7 +39,7 @@ export default function FilterBar() {
   // Extract all unique inferred tags from nodes
   const allInferredTags = useMemo(() => {
     const tagSet = new Set<string>();
-    nodes.forEach((node) => {
+    nodes.forEach((node: GraphNode) => {
       node.data.inferredTags?.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet).sort();
@@ -213,7 +213,7 @@ export default function FilterBar() {
               <div className="flex items-center gap-2">
                 <span>Resources:</span>
                 <div className="flex items-center gap-1">
-                  {Array.from(resourceTypeFilters).map((type) => {
+                  {(Array.from(resourceTypeFilters) as string[]).map((type) => {
                     const resource = RESOURCE_TYPES.find((r) => r.type === type);
                     if (!resource) return null;
                     return (
@@ -234,7 +234,7 @@ export default function FilterBar() {
                 <div className="flex items-center gap-2">
                   <span>Tags:</span>
                   <div className="flex items-center gap-1">
-                    {Array.from(tagFilters).map((tag) => (
+                    {(Array.from(tagFilters) as string[]).map((tag) => (
                       <span
                         key={tag}
                         className="px-2 py-1 rounded bg-slate-500 text-white text-xs font-medium"
@@ -251,7 +251,7 @@ export default function FilterBar() {
                 <div className="flex items-center gap-2">
                   <span>Inferred:</span>
                   <div className="flex items-center gap-1">
-                    {Array.from(inferredTagFilters).map((tag) => (
+                    {(Array.from(inferredTagFilters) as string[]).map((tag) => (
                       <span
                         key={tag}
                         className="px-2 py-1 rounded bg-amber-500 text-white text-xs font-medium"

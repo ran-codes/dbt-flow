@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { useGraphStore } from '@/store/useGraphStore';
+import { useGraphStore, type ExportedNode } from '@/store/useGraphStore';
 import ExportModal from '@/components/ExportModal';
 
 // Import LineageGraph dynamically to avoid SSR issues with ReactFlow
@@ -21,7 +21,7 @@ export default function VisualizePage() {
   const { nodes, projectName, searchQuery, setSearchQuery, exportNodesData, getFilteredNodes } = useGraphStore();
   const [mounted, setMounted] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [exportData, setExportData] = useState<any[]>([]);
+  const [exportData, setExportData] = useState<ExportedNode[]>([]);
 
   useEffect(() => {
     setMounted(true);

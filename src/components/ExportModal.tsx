@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import type { ExportedNode } from '@/store/useGraphStore';
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: any[];
+  data: ExportedNode[];
 }
 
 export default function ExportModal({ isOpen, onClose, data }: ExportModalProps) {
