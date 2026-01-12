@@ -41,6 +41,9 @@ function LineageGraphInner() {
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
+    // Skip store sync when in focused mode - let local state manage the view
+    if (focusedNodeId) return;
+
     const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, 'OR');
 
     // Apply layout and set nodes
@@ -58,7 +61,7 @@ function LineageGraphInner() {
       setFilteredNodes(filtered);
       setFilteredEdges(filteredE);
     }
-  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView]);
+  }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView, focusedNodeId]);
 
   // Relayout filtered nodes to position them closer together and fit view
   const handleRelayout = useCallback(() => {
@@ -243,7 +246,8 @@ function LineageGraphInner() {
           label: 'Untitled',
           type: 'model',
           isUserCreated: true,
-          inferredTags: ['mart'],
+          materialized: false,
+          tags: ['planned'],
         },
         style: {
           padding: 0,

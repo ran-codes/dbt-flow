@@ -13,6 +13,7 @@ export type GraphNode = Node<{
   tags?: string[];
   inferredTags?: string[];
   isUserCreated?: boolean;
+  materialized?: boolean;
 }>;
 
 export type GraphEdge = Edge;
@@ -394,13 +395,13 @@ export function filterNodes(
   }
 
   // Filter by inferred tags - if no filters selected, show nothing; otherwise use OR logic
+  // User-created nodes bypass this filter (they have no inferred layer)
   if (inferredTagFilters) {
     if (inferredTagFilters.size === 0) {
-      filteredNodes = [];
+      filteredNodes = filteredNodes.filter((node) => node.data.isUserCreated);
     } else {
-      // OR: node must have at least one of the selected inferred tags
       filteredNodes = filteredNodes.filter((node) =>
-        node.data.inferredTags?.some((tag) => inferredTagFilters.has(tag))
+        node.data.isUserCreated || node.data.inferredTags?.some((tag) => inferredTagFilters.has(tag))
       );
     }
   }

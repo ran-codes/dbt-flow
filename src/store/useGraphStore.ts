@@ -221,7 +221,8 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         label: 'Untitled',
         type: 'model',
         isUserCreated: true,
-        inferredTags: ['mart'], // Default inferred tag
+        materialized: false,
+        tags: ['planned'],
       },
       style: {
         padding: 0,
