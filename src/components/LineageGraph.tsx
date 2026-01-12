@@ -27,7 +27,7 @@ const nodeTypes = {
 };
 
 function LineageGraphInner() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
@@ -207,6 +207,69 @@ function LineageGraphInner() {
       fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
     }, 100);
   }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView]);
+
+  const handleAddDownstream = useCallback(
+    (parentNodeId: string) => {
+      setContextMenu(null);
+
+      const parentNode = filteredNodes.find((n) => n.id === parentNodeId);
+      if (!parentNode) return;
+
+      // Calculate position: 250px to the right of parent node
+      const HORIZONTAL_OFFSET = 250;
+      const position = {
+        x: parentNode.position.x + HORIZONTAL_OFFSET,
+        y: parentNode.position.y,
+      };
+
+      // Check for existing nodes at similar position and offset vertically if needed
+      const VERTICAL_OFFSET = 100;
+      const nodesAtSameX = filteredNodes.filter(
+        (n) => Math.abs(n.position.x - position.x) < 50
+      );
+      if (nodesAtSameX.length > 0) {
+        const maxY = Math.max(...nodesAtSameX.map((n) => n.position.y));
+        position.y = maxY + VERTICAL_OFFSET;
+      }
+
+      const newNodeId = addDownstreamNode(parentNodeId, position);
+
+      // Update local filtered nodes to include the new node
+      const newNode = {
+        id: newNodeId,
+        type: 'default',
+        position,
+        data: {
+          label: 'Untitled',
+          type: 'model',
+          isUserCreated: true,
+          inferredTags: ['mart'],
+        },
+        style: {
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+        },
+      };
+
+      const newEdge = {
+        id: `${parentNodeId}-${newNodeId}`,
+        source: parentNodeId,
+        target: newNodeId,
+        type: 'smoothstep',
+        animated: false,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#64748b',
+        },
+        style: { stroke: '#64748b', strokeWidth: 2 },
+      };
+
+      setFilteredNodes((prev) => [...prev, newNode as Node]);
+      setFilteredEdges((prev) => [...prev, newEdge as Edge]);
+    },
+    [filteredNodes, addDownstreamNode]
+  );
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -457,6 +520,16 @@ function LineageGraphInner() {
               Show Full Graph
             </button>
           )}
+          <hr className="my-2 border-slate-200" />
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-blue-600"
+            onClick={() => handleAddDownstream(contextMenu.nodeId)}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Node Downstream
+          </button>
           <hr className="my-2 border-slate-200" />
           <button
             className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-slate-600"

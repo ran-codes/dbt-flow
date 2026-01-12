@@ -12,6 +12,7 @@ export type GraphNode = Node<{
   schema?: string;
   tags?: string[];
   inferredTags?: string[];
+  isUserCreated?: boolean;
 }>;
 
 export type GraphEdge = Edge;

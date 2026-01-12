@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { MarkerType } from 'reactflow';
 import type { GraphNode, GraphEdge } from '@/lib/graphBuilder';
 import type { ParsedManifest } from '@/lib/manifestParser';
 import { filterNodes } from '@/lib/graphBuilder';
@@ -31,6 +32,7 @@ export type GraphStore = {
   tagFilterMode: 'AND' | 'OR';
   inferredTagFilters: Set<string>;
   inferredTagFilterMode: 'AND' | 'OR';
+  editingNodeId: string | null;
 
   // Actions
   setGraph: (nodes: GraphNode[], edges: GraphEdge[], manifest: ParsedManifest) => void;
@@ -47,6 +49,11 @@ export type GraphStore = {
   clearGraph: () => void;
   exportNodesData: (nodesToExport?: GraphNode[]) => ExportedNode[];
   getFilteredNodes: () => GraphNode[];
+
+  // Node editing actions
+  setEditingNodeId: (nodeId: string | null) => void;
+  addDownstreamNode: (parentNodeId: string, position: { x: number; y: number }) => string;
+  updateNodeLabel: (nodeId: string, newLabel: string) => void;
 };
 
 export const useGraphStore = create<GraphStore>((set, get) => ({
@@ -62,6 +69,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   tagFilterMode: 'OR', // Default: OR logic
   inferredTagFilters: new Set(), // Default: no inferred tag filters
   inferredTagFilterMode: 'OR', // Default: OR logic
+  editingNodeId: null, // No node being edited initially
 
   // Actions
   setGraph: (nodes, edges, manifest) => {
@@ -195,4 +203,61 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     );
     return filtered.nodes;
   },
+
+  // Node editing actions
+  setEditingNodeId: (nodeId) =>
+    set({
+      editingNodeId: nodeId,
+    }),
+
+  addDownstreamNode: (parentNodeId, position) => {
+    const newNodeId = `user-node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const newNode: GraphNode = {
+      id: newNodeId,
+      type: 'default',
+      position,
+      data: {
+        label: 'Untitled',
+        type: 'model',
+        isUserCreated: true,
+        inferredTags: ['mart'], // Default inferred tag
+      },
+      style: {
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
+      },
+    };
+
+    const newEdge: GraphEdge = {
+      id: `${parentNodeId}-${newNodeId}`,
+      source: parentNodeId,
+      target: newNodeId,
+      type: 'smoothstep',
+      animated: false,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#64748b',
+      },
+      style: { stroke: '#64748b', strokeWidth: 2 },
+    };
+
+    set((state) => ({
+      nodes: [...state.nodes, newNode],
+      edges: [...state.edges, newEdge],
+      editingNodeId: newNodeId, // Immediately enter edit mode
+    }));
+
+    return newNodeId;
+  },
+
+  updateNodeLabel: (nodeId, newLabel) =>
+    set((state) => ({
+      nodes: state.nodes.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, label: newLabel } }
+          : node
+      ),
+    })),
 }));
