@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { GraphNode } from '@/lib/graphBuilder';
-import { getNodeColor, getInheritedMetadata, type InheritedMetadata } from '@/lib/graphBuilder';
+import { getNodeColor, getInheritedMetadata, type InheritedMetadata, type CompositeKeyGroup } from '@/lib/graphBuilder';
 import { useGraphStore } from '@/store/useGraphStore';
 
 interface NodeDetailsPanelProps {
@@ -33,8 +33,24 @@ export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetail
     return getInheritedMetadata(node.id, nodes, edges);
   }, [node.id, nodes, edges]);
 
-  const hasInheritedMetadata = inheritedMetadata.compositeKeys.length > 0 ||
-    Object.keys(inheritedMetadata.attributes).length > 0;
+  const hasInheritedMetadata = inheritedMetadata.groups.length > 0;
+
+  // Helper function to get all unique property names for a group
+  const getPropertyNamesForGroup = (group: CompositeKeyGroup): string[] => {
+    const names = new Set<string>();
+    group.sources.forEach(source => {
+      Object.keys(source.properties).forEach(k => names.add(k));
+    });
+    return Array.from(names).sort();
+  };
+
+  // Helper function to format property name for display (snake_case to Title Case)
+  const formatPropertyName = (name: string): string => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   // Sync state when node changes
   useEffect(() => {
@@ -238,57 +254,91 @@ export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetail
             Inherited Metadata
           </button>
           {showInheritedMetadata && (
-            <div className="mt-3 space-y-4">
-              {/* Composite Keys */}
-              {inheritedMetadata.compositeKeys.length > 0 && (
-                <div>
-                  <h5 className="text-xs font-semibold text-gray-600 mb-1">Composite Keys</h5>
-                  <div className="flex flex-wrap gap-1">
-                    {inheritedMetadata.compositeKeys.map((key) => (
-                      <span
-                        key={key}
-                        className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-mono"
-                      >
-                        {key}
-                      </span>
-                    ))}
+            <div className="mt-3 space-y-6">
+              {/* Render a table for each composite key group */}
+              {inheritedMetadata.groups.map((group, groupIndex) => {
+                const propertyNames = getPropertyNamesForGroup(group);
+                return (
+                  <div key={groupIndex}>
+                    {/* Group header */}
+                    <h5 className="text-xs font-semibold text-gray-600 mb-2">
+                      {group.keyNames.length > 0
+                        ? `Keys: ${group.keyNames.join(', ')}`
+                        : 'Sources (no composite keys)'}
+                    </h5>
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-xs border-collapse border border-gray-200">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="px-2 py-1.5 text-left border border-gray-200 font-semibold text-gray-700">
+                              Source
+                            </th>
+                            {/* Dynamic columns for composite keys */}
+                            {group.keyNames.map(keyName => (
+                              <th
+                                key={keyName}
+                                className="px-2 py-1.5 text-left border border-gray-200 font-mono bg-blue-50 text-blue-800"
+                              >
+                                {keyName}
+                              </th>
+                            ))}
+                            {/* Dynamic columns for properties */}
+                            {propertyNames.map(propName => (
+                              <th
+                                key={propName}
+                                className="px-2 py-1.5 text-left border border-gray-200 font-semibold text-gray-700"
+                              >
+                                {formatPropertyName(propName)}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.sources.map((source, idx) => (
+                            <tr
+                              key={`${source.sourceNodeId}-${idx}`}
+                              className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                            >
+                              {/* Source node name with path tooltip */}
+                              <td className="px-2 py-1.5 border border-gray-200">
+                                <div className="font-medium text-gray-900" title={source.path.join(' → ')}>
+                                  {source.sourceNodeName}
+                                </div>
+                                {source.path.length > 2 && (
+                                  <div className="text-gray-400 text-[10px] truncate max-w-[120px]">
+                                    {source.path.slice(0, -1).join(' → ')}
+                                  </div>
+                                )}
+                              </td>
+                              {/* Composite key values */}
+                              {group.keyNames.map(keyName => (
+                                <td
+                                  key={keyName}
+                                  className="px-2 py-1.5 border border-gray-200 font-mono text-blue-700"
+                                >
+                                  {source.compositeKeys[keyName] ?? '-'}
+                                </td>
+                              ))}
+                              {/* Property values */}
+                              {propertyNames.map(propName => (
+                                <td
+                                  key={propName}
+                                  className="px-2 py-1.5 border border-gray-200 text-gray-700"
+                                >
+                                  {source.properties[propName] !== undefined
+                                    ? String(source.properties[propName])
+                                    : '-'}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* Inherited Attributes */}
-              {Object.entries(inheritedMetadata.attributes).map(([attrName, values]) => (
-                <div key={attrName}>
-                  <h5 className="text-xs font-semibold text-gray-600 mb-1">
-                    {attrName.replace(/_/g, ' ')}
-                  </h5>
-                  <div className="space-y-2">
-                    {values.map((attr, idx) => (
-                      <div
-                        key={`${attr.sourceNodeId}-${idx}`}
-                        className="bg-gray-50 rounded p-2 text-xs"
-                      >
-                        <div className="font-semibold text-gray-800">{attr.value}</div>
-                        <div className="text-gray-500 mt-1">
-                          <span className="text-gray-400">from:</span>{' '}
-                          {attr.path.length > 0 ? (
-                            attr.path.map((name, i) => (
-                              <span key={i}>
-                                {i > 0 && <span className="text-gray-400"> → </span>}
-                                <span className={i === attr.path.length - 1 ? 'text-gray-600' : 'text-gray-700'}>
-                                  {name}
-                                </span>
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-gray-700">{attr.sourceNodeName}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

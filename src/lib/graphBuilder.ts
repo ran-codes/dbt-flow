@@ -1,7 +1,7 @@
 import dagre from 'dagre';
 import type { Node, Edge } from 'reactflow';
 import { MarkerType } from 'reactflow';
-import type { DbtNode, DbtNodeMeta } from './manifestParser';
+import type { DbtNode, DbtNodeMeta, DbtNodeMetaToPropagate, PropagatedMetadataEntry } from './manifestParser';
 
 export type GraphNode = Node<{
   label: string;
@@ -440,21 +440,29 @@ export function filterNodes(
 }
 
 /**
- * Represents an inherited attribute with its source attribution
+ * Represents a single source's contribution to inherited metadata
  */
-export type InheritedAttribute = {
-  value: string;
+export type InheritedSource = {
   sourceNodeId: string;
   sourceNodeName: string;
-  path: string[]; // Node names from source to current node
+  path: string[];  // Lineage path from source to current node
+  compositeKeys: Record<string, string>;  // Key-value pairs
+  properties: Record<string, unknown>;  // All other properties
 };
 
 /**
- * Represents all inherited metadata for a node
+ * Groups sources by their composite key structure
+ */
+export type CompositeKeyGroup = {
+  keyNames: string[];  // Sorted list of key names, e.g., ["iso2", "year"]
+  sources: InheritedSource[];  // All sources with this key structure
+};
+
+/**
+ * Represents all inherited metadata for a node, grouped by composite key structure
  */
 export type InheritedMetadata = {
-  compositeKeys: string[]; // Union of all upstream composite keys
-  attributes: Record<string, InheritedAttribute[]>; // Attribute name -> list of values with sources
+  groups: CompositeKeyGroup[];  // Sources grouped by composite key structure
 };
 
 /**
@@ -500,60 +508,65 @@ function getPathBetweenNodes(
 
 /**
  * Gets inherited metadata for a node by traversing upstream
- * Collects composite_keys and attributes from all ancestor nodes that have meta defined
+ * Collects metadata from all ancestor nodes that have meta.to_propagate defined
+ * Groups sources by their composite key structure for table display
  */
 export function getInheritedMetadata(
   nodeId: string,
   nodes: GraphNode[],
   edges: GraphEdge[]
 ): InheritedMetadata {
-  const result: InheritedMetadata = {
-    compositeKeys: [],
-    attributes: {},
-  };
+  const sources: InheritedSource[] = [];
 
   // Get all ancestors (upstream nodes)
   const ancestorIds = getAncestors(nodeId, edges);
   ancestorIds.delete(nodeId); // Remove self
 
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  const compositeKeysSet = new Set<string>();
 
-  // Collect metadata from ancestors that have meta defined
+  // Collect metadata from ancestors that have meta.to_propagate defined
   for (const ancestorId of ancestorIds) {
     const ancestorNode = nodeMap.get(ancestorId);
-    if (!ancestorNode?.data.meta) continue;
+    if (!ancestorNode) continue;
 
-    const meta = ancestorNode.data.meta;
+    const toPropagate = ancestorNode.data.meta?.to_propagate;
+    if (!toPropagate) continue;
 
-    // Collect composite keys (union)
-    if (meta.composite_keys) {
-      meta.composite_keys.forEach(key => compositeKeysSet.add(key));
-    }
+    // Handle to_propagate as array (new format)
+    const entries: PropagatedMetadataEntry[] = Array.isArray(toPropagate)
+      ? toPropagate
+      : [];
 
-    // Collect attributes with source attribution
-    const attributesToTrack = ['data_sharing_policy', 'data_owner', 'update_frequency'];
-    for (const attrName of attributesToTrack) {
-      const attrValue = meta[attrName];
-      if (attrValue !== undefined && typeof attrValue === 'string') {
-        if (!result.attributes[attrName]) {
-          result.attributes[attrName] = [];
-        }
+    // Get path from source to current node
+    const path = getPathBetweenNodes(ancestorId, nodeId, nodes, edges);
 
-        // Get path from source to current node
-        const path = getPathBetweenNodes(ancestorId, nodeId, nodes, edges);
+    for (const entry of entries) {
+      const { composite_keys, ...properties } = entry;
 
-        result.attributes[attrName].push({
-          value: attrValue,
-          sourceNodeId: ancestorId,
-          sourceNodeName: ancestorNode.data.label,
-          path,
-        });
-      }
+      sources.push({
+        sourceNodeId: ancestorId,
+        sourceNodeName: ancestorNode.data.label,
+        path,
+        compositeKeys: composite_keys || {},
+        properties,
+      });
     }
   }
 
-  result.compositeKeys = Array.from(compositeKeysSet).sort();
+  // Group sources by composite key structure (sorted key names)
+  const groupMap = new Map<string, CompositeKeyGroup>();
 
-  return result;
+  for (const source of sources) {
+    const keyNames = Object.keys(source.compositeKeys).sort();
+    const groupKey = keyNames.join('|');
+
+    if (!groupMap.has(groupKey)) {
+      groupMap.set(groupKey, { keyNames, sources: [] });
+    }
+    groupMap.get(groupKey)!.sources.push(source);
+  }
+
+  return {
+    groups: Array.from(groupMap.values()),
+  };
 }

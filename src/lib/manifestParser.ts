@@ -1,9 +1,15 @@
+// Entry in to_propagate array - supports composite key values and arbitrary properties
+export type PropagatedMetadataEntry = {
+  composite_keys: Record<string, string>;  // key-value pairs, e.g., { iso2: "mx", year: "all" }
+  [key: string]: unknown;  // arbitrary properties like source_file_name, source_label, etc.
+};
+
+// to_propagate is now an array of entries
+export type DbtNodeMetaToPropagate = PropagatedMetadataEntry[];
+
 export type DbtNodeMeta = {
-  composite_keys?: string[];
-  data_sharing_policy?: string;
-  data_owner?: string;
-  update_frequency?: string;
-  [key: string]: unknown; // Allow additional metadata fields
+  to_propagate?: DbtNodeMetaToPropagate;
+  [key: string]: unknown; // Allow other metadata
 };
 
 export type DbtNode = {

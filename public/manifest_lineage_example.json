@@ -71,10 +71,17 @@
       "description": "Raw mortality statistics from Mexico Health Ministry",
       "tags": ["source", "mexico", "mortality"],
       "meta": {
-        "composite_keys": ["iso2", "year", "file_name"],
-        "data_sharing_policy": "internal",
-        "data_owner": "Mexico Health Ministry",
-        "update_frequency": "monthly"
+        "to_propagate": [
+          {
+            "composite_keys": {
+              "iso2": "mx",
+              "year": "2024"
+            },
+            "source_file_name": "mexico_mortality_2024.csv",
+            "source_label": "Mexico Health Ministry",
+            "source_data_sharing_policy": "internal"
+          }
+        ]
       }
     },
     "source.lineage_example.raw_data.source__brazil_mortality": {
@@ -88,10 +95,17 @@
       "description": "Raw mortality statistics from Brazil Health Ministry",
       "tags": ["source", "brazil", "mortality"],
       "meta": {
-        "composite_keys": ["iso2", "year", "file_name"],
-        "data_sharing_policy": "public",
-        "data_owner": "Brazil Health Ministry",
-        "update_frequency": "quarterly"
+        "to_propagate": [
+          {
+            "composite_keys": {
+              "iso2": "br",
+              "year": "2024"
+            },
+            "source_file_name": "brazil_mortality_2024.csv",
+            "source_label": "Brazil Health Ministry",
+            "source_data_sharing_policy": "public"
+          }
+        ]
       }
     }
   },
