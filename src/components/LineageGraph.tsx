@@ -222,38 +222,54 @@ function LineageGraphInner() {
     [filteredNodes, filteredEdges, nodes, edges, fitView, setSelectedNode]
   );
 
-  const handleHideParents = useCallback(
+  // Focus: This + Downstream - show only this node and its descendants, hide everything else
+  const handleFocusDownstream = useCallback(
     (nodeId: string) => {
       setContextMenu(null);
 
-      // Get ancestors (parents) and include the clicked node
-      const ancestors = getAncestors(nodeId, filteredNodes, filteredEdges);
+      // Get this node and all its descendants
+      const descendants = getDescendants(nodeId, filteredNodes, filteredEdges);
+      const toKeep = new Set([nodeId, ...descendants]);
 
-      // Close details card if it's one of the nodes being hidden
-      if (selectedNode && ancestors.has(selectedNode.id)) {
+      // Hide all nodes NOT in this set
+      const toHide = new Set(
+        filteredNodes
+          .filter((n) => !toKeep.has(n.id))
+          .map((n) => n.id)
+      );
+
+      // Close details card if it's being hidden
+      if (selectedNode && toHide.has(selectedNode.id)) {
         setSelectedNode(null);
       }
 
-      // Add to hidden nodes
-      setHiddenNodes((prev) => new Set([...prev, ...ancestors]));
+      setHiddenNodes(toHide);
     },
     [filteredNodes, filteredEdges, selectedNode, setSelectedNode]
   );
 
-  const handleHideChildren = useCallback(
+  // Focus: This + Upstream - show only this node and its ancestors, hide everything else
+  const handleFocusUpstream = useCallback(
     (nodeId: string) => {
       setContextMenu(null);
 
-      // Get descendants (children) and include the clicked node
-      const descendants = getDescendants(nodeId, filteredNodes, filteredEdges);
+      // Get this node and all its ancestors
+      const ancestors = getAncestors(nodeId, filteredNodes, filteredEdges);
+      const toKeep = new Set([nodeId, ...ancestors]);
 
-      // Close details card if it's one of the nodes being hidden
-      if (selectedNode && descendants.has(selectedNode.id)) {
+      // Hide all nodes NOT in this set
+      const toHide = new Set(
+        filteredNodes
+          .filter((n) => !toKeep.has(n.id))
+          .map((n) => n.id)
+      );
+
+      // Close details card if it's being hidden
+      if (selectedNode && toHide.has(selectedNode.id)) {
         setSelectedNode(null);
       }
 
-      // Add to hidden nodes
-      setHiddenNodes((prev) => new Set([...prev, ...descendants]));
+      setHiddenNodes(toHide);
     },
     [filteredNodes, filteredEdges, selectedNode, setSelectedNode]
   );
@@ -753,7 +769,7 @@ function LineageGraphInner() {
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="absolute bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50 min-w-[180px]"
+          className="absolute bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[180px]"
           style={{
             left: `${contextMenu.x}px`,
             top: `${contextMenu.y}px`,
@@ -761,7 +777,7 @@ function LineageGraphInner() {
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
             onClick={() => handleFocusOnNode(contextMenu.nodeId)}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -771,26 +787,26 @@ function LineageGraphInner() {
             Focus on Node
           </button>
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
-            onClick={() => handleHideParents(contextMenu.nodeId)}
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+            onClick={() => handleFocusDownstream(contextMenu.nodeId)}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
-            Hide This and Upstream
+            Focus: This + Downstream
           </button>
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
-            onClick={() => handleHideChildren(contextMenu.nodeId)}
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+            onClick={() => handleFocusUpstream(contextMenu.nodeId)}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
             </svg>
-            Hide This and Downstream
+            Focus: This + Upstream
           </button>
           {(focusedNodeId || hiddenNodes.size > 0) && (
             <button
-              className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
+              className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2"
               onClick={handleShowFullGraph}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -801,7 +817,7 @@ function LineageGraphInner() {
           )}
           <hr className="my-2 border-slate-200" />
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-blue-600"
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-blue-600"
             onClick={() => handleAddDownstream(contextMenu.nodeId)}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -814,7 +830,7 @@ function LineageGraphInner() {
             const { canDelete, reason } = canDeleteNode(contextMenu.nodeId);
             return (
               <button
-                className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2 ${
+                className={`w-full px-4 py-1.5 text-left text-sm transition-colors flex items-center gap-2 ${
                   canDelete
                     ? 'hover:bg-red-50 text-red-600'
                     : 'text-slate-400 cursor-not-allowed'
@@ -832,7 +848,7 @@ function LineageGraphInner() {
           })()}
           <hr className="my-2 border-slate-200" />
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-slate-600"
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-slate-600"
             onClick={() => {
               const node = filteredNodes.find((n) => n.id === contextMenu.nodeId);
               if (node) {
@@ -852,18 +868,18 @@ function LineageGraphInner() {
       {/* Edge Context Menu */}
       {edgeContextMenu && (
         <div
-          className="absolute bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50 min-w-[200px]"
+          className="absolute bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[200px]"
           style={{
             left: `${edgeContextMenu.x}px`,
             top: `${edgeContextMenu.y}px`,
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100">
+          <div className="px-4 py-1.5 text-xs text-slate-500 border-b border-slate-100">
             {edgeContextMenu.sourceLabel} → {edgeContextMenu.targetLabel}
           </div>
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 transition-colors flex items-center gap-2 text-red-600"
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-red-50 transition-colors flex items-center gap-2 text-red-600"
             onClick={() => handleDeleteEdge(edgeContextMenu.edgeId)}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -883,7 +899,7 @@ function LineageGraphInner() {
         >
           <button
             onClick={() => handleAddStandaloneNode(canvasContextMenu.flowPosition)}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors text-slate-700 flex items-center gap-2"
+            className="w-full px-4 py-1.5 text-left text-sm hover:bg-slate-100 transition-colors text-slate-700 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -911,49 +927,16 @@ function LineageGraphInner() {
         </div>
       )}
 
-      {/* Stats overlay with relayout button */}
-      <div className="absolute bottom-16 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-600">
-            Nodes: <span className="font-semibold text-gray-900">{filteredNodes.length}</span>
-          </span>
-          <span className="text-gray-600">
-            Edges: <span className="font-semibold text-gray-900">{filteredEdges.length}</span>
-          </span>
-          <span className="text-gray-600">
-            Zoom: <span className="font-semibold text-gray-900">{zoomLevel}%</span>
-          </span>
-          <button
-            onClick={() => handleAddStandaloneNode()}
-            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1"
-            title="Add a new standalone node"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Node
-          </button>
-          <button
-            onClick={handleRelayout}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
-            title="Optimize node positions and spacing"
-          >
-            Optimize Layout
-          </button>
-          {(focusedNodeId || hiddenNodes.size > 0) && (
-            <button
-              onClick={handleShowFullGraph}
-              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium rounded-md transition-colors"
-              title="Show full graph"
-            >
-              Show Full Graph
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Filter bar */}
-      <FilterBar />
+      <FilterBar
+        nodeCount={filteredNodes.length}
+        edgeCount={filteredEdges.length}
+        zoomLevel={zoomLevel}
+        onAddNode={() => handleAddStandaloneNode()}
+        onOptimizeLayout={handleRelayout}
+        onShowFullGraph={handleShowFullGraph}
+        showFullGraphButton={!!(focusedNodeId || hiddenNodes.size > 0)}
+      />
     </div>
   );
 }
