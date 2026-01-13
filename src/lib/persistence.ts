@@ -1,5 +1,5 @@
 /**
- * Persistence types and serialization helpers for dbt-flow
+ * Persistence types and serialization helpers for dbt-planner
  */
 
 import type { GraphNode, GraphEdge } from './graphBuilder';

@@ -185,7 +185,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `dbt-flow-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `dbt-planner-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -305,7 +305,7 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <h1 className="text-xl font-semibold text-slate-900">dbt-flow</h1>
+          <h1 className="text-xl font-semibold text-slate-900">dbt-planner</h1>
           <p className="text-sm text-slate-500">Interactive dbt lineage visualization</p>
         </div>
       </header>

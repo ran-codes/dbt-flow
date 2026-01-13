@@ -7,13 +7,13 @@ import type { ProjectMetadata, SavedProject } from './persistence';
 
 // Configure localForage
 const projectStore = localforage.createInstance({
-  name: 'dbt-flow',
+  name: 'dbt-planner',
   storeName: 'projects',
-  description: 'Saved dbt-flow planning projects',
+  description: 'Saved dbt-planner projects',
 });
 
 const indexStore = localforage.createInstance({
-  name: 'dbt-flow',
+  name: 'dbt-planner',
   storeName: 'index',
   description: 'Project metadata index',
 });

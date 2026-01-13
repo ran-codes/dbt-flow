@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dbt-flow",
+  title: "dbt-planner",
   description: "Interactive dbt Lineage Visualization",
 };
 

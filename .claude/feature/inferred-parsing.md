@@ -1,1 +1,0 @@
-add some logic. 1) so if a file name has regex detected of ####### (so any eight digits) then it is base as well. 2) the current everything else -> should be mart. 3) add some additional layers so `core__` should be core which si after int__ 4) then mart types which are `internal__` and `public__` which are marts but call label then mart public and mart internal?

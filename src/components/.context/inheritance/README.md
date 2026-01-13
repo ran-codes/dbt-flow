@@ -1,6 +1,6 @@
 # Metadata Inheritance System
 
-This document explains how metadata propagation works in dbt-flow, allowing downstream nodes to inherit metadata from their upstream sources.
+This document explains how metadata propagation works in dbt-planner, allowing downstream nodes to inherit metadata from their upstream sources.
 
 ## Overview
 
