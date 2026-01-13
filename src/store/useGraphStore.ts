@@ -335,7 +335,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       }
       if (node.pseudoCode) {
         lines.push('**Pseudo Code:**');
-        lines.push('```sql');
+        lines.push('```');
         lines.push(node.pseudoCode);
         lines.push('```');
         lines.push('');
