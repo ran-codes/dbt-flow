@@ -489,31 +489,31 @@ export default function Home() {
                 {sampleDropdownOpen && (
                   <div className="absolute left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
                     <button
-                      onClick={() => handleDemoClick('manifest_jaffle_active_v0_0_1.json', 'Jaffle Shop')}
+                      onClick={() => router.push('/visualize?sample=jaffle')}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       <span className="text-slate-900">Jaffle Shop</span>
                       <span className="block text-xs text-slate-500">Classic dbt tutorial</span>
                     </button>
                     <button
-                      onClick={() => handleDemoClick('test.json', 'Data Warehouse')}
+                      onClick={() => router.push('/visualize?sample=warehouse')}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       <span className="text-slate-900">Data Warehouse</span>
                       <span className="block text-xs text-slate-500">Custom layers</span>
                     </button>
                     <button
-                      onClick={() => handleDemoClick('manifest_salurbal_api_v1_2_2.json', 'Lakehouse')}
+                      onClick={() => router.push('/visualize?sample=lakehouse')}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
                       <span className="text-slate-900">Lakehouse</span>
                       <span className="block text-xs text-slate-500">Multi-layer architecture</span>
                     </button>
                     <button
-                      onClick={() => handleDemoClick('manifest_lineage_example.json', 'Lineage Example')}
+                      onClick={() => router.push('/visualize?sample=salurbal')}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
-                      <span className="text-slate-900">Lineage Example</span>
+                      <span className="text-slate-900">SALURBAL Mortality</span>
                       <span className="block text-xs text-slate-500">Metadata inheritance demo</span>
                     </button>
                   </div>
