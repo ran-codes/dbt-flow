@@ -119,18 +119,18 @@ export default function VisualizePage() {
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
                 <button
-                  onClick={handleExportJSON}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-3"
-                >
-                  <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded">JSON</span>
-                  <span className="text-slate-700">For LLM Agents</span>
-                </button>
-                <button
                   onClick={handleExportMarkdown}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-3"
                 >
                   <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded">MD</span>
-                  <span className="text-slate-700">Work Order Document</span>
+                  <span className="text-slate-700">Work Plan</span>
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-3"
+                >
+                  <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded">JSON</span>
+                  <span className="text-slate-700">Work Plan</span>
                 </button>
               </div>
             )}
