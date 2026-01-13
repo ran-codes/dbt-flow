@@ -7,51 +7,51 @@
     "adapter_type": "duckdb"
   },
   "nodes": {
-    "model.lineage_example.harmonized_mexico": {
+    "model.lineage_example.base__mexico_mortality": {
       "database": "dev",
-      "schema": "marts",
-      "name": "harmonized_mexico",
+      "schema": "base",
+      "name": "base__mexico_mortality",
       "resource_type": "model",
       "package_name": "lineage_example",
-      "unique_id": "model.lineage_example.harmonized_mexico",
+      "unique_id": "model.lineage_example.base__mexico_mortality",
       "description": "Cleaned and standardized Mexico mortality data",
-      "tags": ["harmonized", "mexico"],
+      "tags": ["base", "mexico"],
       "depends_on": {
-        "nodes": ["source.lineage_example.raw_data.mexico_mortality"]
+        "nodes": ["source.lineage_example.raw_data.source__mexico_mortality"]
       },
       "config": {
         "materialized": "table"
       }
     },
-    "model.lineage_example.harmonized_brazil": {
+    "model.lineage_example.base__brazil_mortality": {
       "database": "dev",
-      "schema": "marts",
-      "name": "harmonized_brazil",
+      "schema": "base",
+      "name": "base__brazil_mortality",
       "resource_type": "model",
       "package_name": "lineage_example",
-      "unique_id": "model.lineage_example.harmonized_brazil",
+      "unique_id": "model.lineage_example.base__brazil_mortality",
       "description": "Cleaned and standardized Brazil mortality data",
-      "tags": ["harmonized", "brazil"],
+      "tags": ["base", "brazil"],
       "depends_on": {
-        "nodes": ["source.lineage_example.raw_data.brazil_mortality"]
+        "nodes": ["source.lineage_example.raw_data.source__brazil_mortality"]
       },
       "config": {
         "materialized": "table"
       }
     },
-    "model.lineage_example.compiled_harmonized": {
+    "model.lineage_example.int__harmonized_mortality": {
       "database": "dev",
-      "schema": "marts",
-      "name": "compiled_harmonized",
+      "schema": "intermediate",
+      "name": "int__harmonized_mortality",
       "resource_type": "model",
       "package_name": "lineage_example",
-      "unique_id": "model.lineage_example.compiled_harmonized",
+      "unique_id": "model.lineage_example.int__harmonized_mortality",
       "description": "Combined harmonized mortality data from all countries",
-      "tags": ["compiled", "final"],
+      "tags": ["intermediate", "final"],
       "depends_on": {
         "nodes": [
-          "model.lineage_example.harmonized_mexico",
-          "model.lineage_example.harmonized_brazil"
+          "model.lineage_example.base__mexico_mortality",
+          "model.lineage_example.base__brazil_mortality"
         ]
       },
       "config": {
@@ -60,14 +60,14 @@
     }
   },
   "sources": {
-    "source.lineage_example.raw_data.mexico_mortality": {
+    "source.lineage_example.raw_data.source__mexico_mortality": {
       "database": "raw",
       "schema": "raw_data",
-      "name": "mexico_mortality",
+      "name": "source__mexico_mortality",
       "source_name": "raw_data",
       "resource_type": "source",
       "package_name": "lineage_example",
-      "unique_id": "source.lineage_example.raw_data.mexico_mortality",
+      "unique_id": "source.lineage_example.raw_data.source__mexico_mortality",
       "description": "Raw mortality statistics from Mexico Health Ministry",
       "tags": ["source", "mexico", "mortality"],
       "meta": {
@@ -77,14 +77,14 @@
         "update_frequency": "monthly"
       }
     },
-    "source.lineage_example.raw_data.brazil_mortality": {
+    "source.lineage_example.raw_data.source__brazil_mortality": {
       "database": "raw",
       "schema": "raw_data",
-      "name": "brazil_mortality",
+      "name": "source__brazil_mortality",
       "source_name": "raw_data",
       "resource_type": "source",
       "package_name": "lineage_example",
-      "unique_id": "source.lineage_example.raw_data.brazil_mortality",
+      "unique_id": "source.lineage_example.raw_data.source__brazil_mortality",
       "description": "Raw mortality statistics from Brazil Health Ministry",
       "tags": ["source", "brazil", "mortality"],
       "meta": {

@@ -40,8 +40,9 @@ export const nodeColors: Record<string, string> = {
  * Color scheme for inferred tags (data layers)
  */
 export const inferredTagColors: Record<string, string> = {
+  source: '#10b981',           // green - source data
   raw: '#f59e0b',              // amber - raw seed data
-  staging: '#10b981',          // green - staging transformations
+  staging: '#22c55e',          // green-500 - staging transformations
   base: '#3b82f6',             // blue - base layer with date patterns
   intermediate: '#8b5cf6',     // purple - intermediate transformations
   core: '#a855f7',             // purple-500 - core business logic
@@ -66,6 +67,7 @@ export function getNodeColor(resourceType: string, inferredTags?: string[]): str
 /**
  * Infer tags from model name based on common dbt naming conventions
  * Supports multiple naming patterns:
+ * - Source layer: source__
  * - Base layer: base__, stage__, or contains 8 consecutive digits (########)
  * - Staging layer: stg_, staging_, raw_
  * - Intermediate layer: int_, int__, intermediate_
@@ -75,6 +77,11 @@ export function getNodeColor(resourceType: string, inferredTags?: string[]): str
  */
 function inferTagsFromName(name: string): string[] {
   const lowerName = name.toLowerCase();
+
+  // Source layer - raw source data
+  if (lowerName.startsWith('source__')) {
+    return ['source'];
+  }
 
   // Base layer - has base__, stage__ prefix, or contains 8 consecutive digits
   const hasEightDigits = /\d{8}/.test(name);
