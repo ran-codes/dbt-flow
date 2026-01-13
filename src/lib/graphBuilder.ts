@@ -1,6 +1,6 @@
 import dagre from 'dagre';
 import type { Node, Edge } from 'reactflow';
-import { MarkerType } from 'reactflow';
+import { MarkerType, getIncomers, getOutgoers } from 'reactflow';
 import type { DbtNode, DbtNodeMeta, DbtNodeMetaToPropagate, PropagatedMetadataEntry } from './manifestParser';
 
 export type GraphNode = Node<{
@@ -323,44 +323,74 @@ export function getLayoutedElements(
 
 /**
  * Finds all ancestor nodes (upstream dependencies) of a given node
+ * Uses React Flow's getIncomers() utility for direct parents, then traverses recursively
  */
 export function getAncestors(
   nodeId: string,
-  edges: GraphEdge[],
-  visited: Set<string> = new Set()
+  nodes: GraphNode[],
+  edges: GraphEdge[]
 ): Set<string> {
-  if (visited.has(nodeId)) return visited;
-  visited.add(nodeId);
+  const ancestors = new Set<string>();
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-  // Find all edges that point TO this node (sources)
-  const parentEdges = edges.filter((edge) => edge.target === nodeId);
+  const startNode = nodeMap.get(nodeId);
+  if (!startNode) return ancestors;
 
-  parentEdges.forEach((edge) => {
-    getAncestors(edge.source, edges, visited);
-  });
+  const queue: GraphNode[] = [startNode];
+  const visited = new Set<string>();
 
-  return visited;
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
+    // Use React Flow's getIncomers to find direct upstream nodes
+    const incomers = getIncomers(current, nodes, edges);
+    for (const incomer of incomers) {
+      if (!ancestors.has(incomer.id)) {
+        ancestors.add(incomer.id);
+        queue.push(incomer as GraphNode);
+      }
+    }
+  }
+
+  return ancestors;
 }
 
 /**
  * Finds all descendant nodes (downstream dependencies) of a given node
+ * Uses React Flow's getOutgoers() utility for direct children, then traverses recursively
  */
 export function getDescendants(
   nodeId: string,
-  edges: GraphEdge[],
-  visited: Set<string> = new Set()
+  nodes: GraphNode[],
+  edges: GraphEdge[]
 ): Set<string> {
-  if (visited.has(nodeId)) return visited;
-  visited.add(nodeId);
+  const descendants = new Set<string>();
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-  // Find all edges that start FROM this node (targets)
-  const childEdges = edges.filter((edge) => edge.source === nodeId);
+  const startNode = nodeMap.get(nodeId);
+  if (!startNode) return descendants;
 
-  childEdges.forEach((edge) => {
-    getDescendants(edge.target, edges, visited);
-  });
+  const queue: GraphNode[] = [startNode];
+  const visited = new Set<string>();
 
-  return visited;
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
+    // Use React Flow's getOutgoers to find direct downstream nodes
+    const outgoers = getOutgoers(current, nodes, edges);
+    for (const outgoer of outgoers) {
+      if (!descendants.has(outgoer.id)) {
+        descendants.add(outgoer.id);
+        queue.push(outgoer as GraphNode);
+      }
+    }
+  }
+
+  return descendants;
 }
 
 /**
@@ -518,9 +548,8 @@ export function getInheritedMetadata(
 ): InheritedMetadata {
   const sources: InheritedSource[] = [];
 
-  // Get all ancestors (upstream nodes)
-  const ancestorIds = getAncestors(nodeId, edges);
-  ancestorIds.delete(nodeId); // Remove self
+  // Get all ancestors (upstream nodes) using React Flow's getIncomers
+  const ancestorIds = getAncestors(nodeId, nodes, edges);
 
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
 

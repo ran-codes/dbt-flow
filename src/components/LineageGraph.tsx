@@ -123,8 +123,8 @@ function LineageGraphInner() {
       setSelectedNode(node as any);
 
       // Get all ancestors (upstream) and descendants (downstream)
-      const ancestors = getAncestors(node.id, filteredEdges);
-      const descendants = getDescendants(node.id, filteredEdges);
+      const ancestors = getAncestors(node.id, filteredNodes, filteredEdges);
+      const descendants = getDescendants(node.id, filteredNodes, filteredEdges);
 
       // Combine all related nodes
       const allRelatedNodes = new Set([...ancestors, ...descendants]);
@@ -138,7 +138,7 @@ function LineageGraphInner() {
       );
       setHighlightedEdges(relatedEdges);
     },
-    [setSelectedNode, filteredEdges]
+    [setSelectedNode, filteredNodes, filteredEdges]
   );
 
   const onNodeContextMenu = useCallback(
@@ -162,8 +162,8 @@ function LineageGraphInner() {
       setSelectedNode(null);
 
       // Get all ancestors and descendants
-      const ancestors = getAncestors(nodeId, edges);
-      const descendants = getDescendants(nodeId, edges);
+      const ancestors = getAncestors(nodeId, nodes, edges);
+      const descendants = getDescendants(nodeId, nodes, edges);
       const focusedNodes = new Set([...ancestors, ...descendants]);
 
       // Filter nodes to only show the lineage
@@ -184,7 +184,7 @@ function LineageGraphInner() {
         fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
       }, 100);
     },
-    [filteredNodes, filteredEdges, edges, fitView, setSelectedNode]
+    [filteredNodes, filteredEdges, nodes, edges, fitView, setSelectedNode]
   );
 
   const handleHideParents = useCallback(
@@ -192,7 +192,7 @@ function LineageGraphInner() {
       setContextMenu(null);
 
       // Get ancestors (parents) and include the clicked node
-      const ancestors = getAncestors(nodeId, filteredEdges);
+      const ancestors = getAncestors(nodeId, filteredNodes, filteredEdges);
 
       // Close details card if it's one of the nodes being hidden
       if (selectedNode && ancestors.has(selectedNode.id)) {
@@ -202,7 +202,7 @@ function LineageGraphInner() {
       // Add to hidden nodes
       setHiddenNodes((prev) => new Set([...prev, ...ancestors]));
     },
-    [filteredEdges, selectedNode, setSelectedNode]
+    [filteredNodes, filteredEdges, selectedNode, setSelectedNode]
   );
 
   const handleHideChildren = useCallback(
@@ -210,7 +210,7 @@ function LineageGraphInner() {
       setContextMenu(null);
 
       // Get descendants (children) and include the clicked node
-      const descendants = getDescendants(nodeId, filteredEdges);
+      const descendants = getDescendants(nodeId, filteredNodes, filteredEdges);
 
       // Close details card if it's one of the nodes being hidden
       if (selectedNode && descendants.has(selectedNode.id)) {
@@ -220,7 +220,7 @@ function LineageGraphInner() {
       // Add to hidden nodes
       setHiddenNodes((prev) => new Set([...prev, ...descendants]));
     },
-    [filteredEdges, selectedNode, setSelectedNode]
+    [filteredNodes, filteredEdges, selectedNode, setSelectedNode]
   );
 
   const handleShowFullGraph = useCallback(() => {

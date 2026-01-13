@@ -237,7 +237,7 @@ export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetail
       </div>
 
       {/* Inherited Metadata (collapsible) */}
-      {!isEditable && hasInheritedMetadata && (
+      {hasInheritedMetadata && (
         <div className="mt-4 border-t border-gray-200 pt-4">
           <button
             onClick={() => setShowInheritedMetadata(!showInheritedMetadata)}
