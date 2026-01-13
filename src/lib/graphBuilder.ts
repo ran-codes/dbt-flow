@@ -1,7 +1,7 @@
 import dagre from 'dagre';
 import type { Node, Edge } from 'reactflow';
 import { MarkerType } from 'reactflow';
-import type { DbtNode } from './manifestParser';
+import type { DbtNode, DbtNodeMeta } from './manifestParser';
 
 export type GraphNode = Node<{
   label: string;
@@ -15,6 +15,7 @@ export type GraphNode = Node<{
   isUserCreated?: boolean;
   materialized?: boolean;
   rawManifest?: Record<string, unknown>;
+  meta?: DbtNodeMeta;
 }>;
 
 export type GraphEdge = Edge;
@@ -158,6 +159,7 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
       tags: node.tags,
       inferredTags: inferTagsFromName(node.name),
       rawManifest: node as unknown as Record<string, unknown>, // Store full manifest node for debugging
+      meta: node.meta, // Pass through metadata for inheritance
     },
     style: {
       padding: 0,
@@ -435,4 +437,123 @@ export function filterNodes(
     nodes: filteredNodes,
     edges: filteredEdges,
   };
+}
+
+/**
+ * Represents an inherited attribute with its source attribution
+ */
+export type InheritedAttribute = {
+  value: string;
+  sourceNodeId: string;
+  sourceNodeName: string;
+  path: string[]; // Node names from source to current node
+};
+
+/**
+ * Represents all inherited metadata for a node
+ */
+export type InheritedMetadata = {
+  compositeKeys: string[]; // Union of all upstream composite keys
+  attributes: Record<string, InheritedAttribute[]>; // Attribute name -> list of values with sources
+};
+
+/**
+ * Gets the path from a source node to a target node
+ */
+function getPathBetweenNodes(
+  sourceId: string,
+  targetId: string,
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): string[] {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+  // BFS to find path
+  const queue: { id: string; path: string[] }[] = [{ id: sourceId, path: [nodeMap.get(sourceId)?.data.label || sourceId] }];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+
+    if (current.id === targetId) {
+      return current.path;
+    }
+
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
+    // Find downstream edges (edges where current node is source)
+    const downstreamEdges = edges.filter(e => e.source === current.id);
+    for (const edge of downstreamEdges) {
+      const nextNode = nodeMap.get(edge.target);
+      if (nextNode && !visited.has(edge.target)) {
+        queue.push({
+          id: edge.target,
+          path: [...current.path, nextNode.data.label],
+        });
+      }
+    }
+  }
+
+  return []; // No path found
+}
+
+/**
+ * Gets inherited metadata for a node by traversing upstream
+ * Collects composite_keys and attributes from all ancestor nodes that have meta defined
+ */
+export function getInheritedMetadata(
+  nodeId: string,
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): InheritedMetadata {
+  const result: InheritedMetadata = {
+    compositeKeys: [],
+    attributes: {},
+  };
+
+  // Get all ancestors (upstream nodes)
+  const ancestorIds = getAncestors(nodeId, edges);
+  ancestorIds.delete(nodeId); // Remove self
+
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const compositeKeysSet = new Set<string>();
+
+  // Collect metadata from ancestors that have meta defined
+  for (const ancestorId of ancestorIds) {
+    const ancestorNode = nodeMap.get(ancestorId);
+    if (!ancestorNode?.data.meta) continue;
+
+    const meta = ancestorNode.data.meta;
+
+    // Collect composite keys (union)
+    if (meta.composite_keys) {
+      meta.composite_keys.forEach(key => compositeKeysSet.add(key));
+    }
+
+    // Collect attributes with source attribution
+    const attributesToTrack = ['data_sharing_policy', 'data_owner', 'update_frequency'];
+    for (const attrName of attributesToTrack) {
+      const attrValue = meta[attrName];
+      if (attrValue !== undefined && typeof attrValue === 'string') {
+        if (!result.attributes[attrName]) {
+          result.attributes[attrName] = [];
+        }
+
+        // Get path from source to current node
+        const path = getPathBetweenNodes(ancestorId, nodeId, nodes, edges);
+
+        result.attributes[attrName].push({
+          value: attrValue,
+          sourceNodeId: ancestorId,
+          sourceNodeName: ancestorNode.data.label,
+          path,
+        });
+      }
+    }
+  }
+
+  result.compositeKeys = Array.from(compositeKeysSet).sort();
+
+  return result;
 }

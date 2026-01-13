@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { GraphNode } from '@/lib/graphBuilder';
-import { getNodeColor } from '@/lib/graphBuilder';
+import { getNodeColor, getInheritedMetadata, type InheritedMetadata } from '@/lib/graphBuilder';
+import { useGraphStore } from '@/store/useGraphStore';
 
 interface NodeDetailsPanelProps {
   node: GraphNode;
@@ -15,6 +16,10 @@ const NODE_TYPES = ['model', 'seed', 'snapshot', 'source', 'test', 'exposure', '
 export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetailsPanelProps) {
   const isEditable = node.data.isUserCreated;
   const [showRawManifest, setShowRawManifest] = useState(false);
+  const [showInheritedMetadata, setShowInheritedMetadata] = useState(false);
+
+  // Get nodes and edges from store for inheritance calculation
+  const { nodes, edges } = useGraphStore();
 
   // Local state for editable fields
   const [label, setLabel] = useState(node.data.label);
@@ -22,6 +27,14 @@ export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetail
   const [description, setDescription] = useState(node.data.description || '');
   const [tagsInput, setTagsInput] = useState(node.data.tags?.join(', ') || '');
   const [pseudoCode, setPseudoCode] = useState(node.data.sql || '');
+
+  // Compute inherited metadata
+  const inheritedMetadata: InheritedMetadata = useMemo(() => {
+    return getInheritedMetadata(node.id, nodes, edges);
+  }, [node.id, nodes, edges]);
+
+  const hasInheritedMetadata = inheritedMetadata.compositeKeys.length > 0 ||
+    Object.keys(inheritedMetadata.attributes).length > 0;
 
   // Sync state when node changes
   useEffect(() => {
@@ -206,6 +219,80 @@ export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetail
           )
         )}
       </div>
+
+      {/* Inherited Metadata (collapsible) */}
+      {!isEditable && hasInheritedMetadata && (
+        <div className="mt-4 border-t border-gray-200 pt-4">
+          <button
+            onClick={() => setShowInheritedMetadata(!showInheritedMetadata)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${showInheritedMetadata ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Inherited Metadata
+          </button>
+          {showInheritedMetadata && (
+            <div className="mt-3 space-y-4">
+              {/* Composite Keys */}
+              {inheritedMetadata.compositeKeys.length > 0 && (
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-600 mb-1">Composite Keys</h5>
+                  <div className="flex flex-wrap gap-1">
+                    {inheritedMetadata.compositeKeys.map((key) => (
+                      <span
+                        key={key}
+                        className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-mono"
+                      >
+                        {key}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Inherited Attributes */}
+              {Object.entries(inheritedMetadata.attributes).map(([attrName, values]) => (
+                <div key={attrName}>
+                  <h5 className="text-xs font-semibold text-gray-600 mb-1">
+                    {attrName.replace(/_/g, ' ')}
+                  </h5>
+                  <div className="space-y-2">
+                    {values.map((attr, idx) => (
+                      <div
+                        key={`${attr.sourceNodeId}-${idx}`}
+                        className="bg-gray-50 rounded p-2 text-xs"
+                      >
+                        <div className="font-semibold text-gray-800">{attr.value}</div>
+                        <div className="text-gray-500 mt-1">
+                          <span className="text-gray-400">from:</span>{' '}
+                          {attr.path.length > 0 ? (
+                            attr.path.map((name, i) => (
+                              <span key={i}>
+                                {i > 0 && <span className="text-gray-400"> → </span>}
+                                <span className={i === attr.path.length - 1 ? 'text-gray-600' : 'text-gray-700'}>
+                                  {name}
+                                </span>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-700">{attr.sourceNodeName}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Raw Manifest (collapsible) */}
       {!isEditable && node.data.rawManifest && (

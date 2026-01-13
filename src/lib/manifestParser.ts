@@ -1,3 +1,11 @@
+export type DbtNodeMeta = {
+  composite_keys?: string[];
+  data_sharing_policy?: string;
+  data_owner?: string;
+  update_frequency?: string;
+  [key: string]: unknown; // Allow additional metadata fields
+};
+
 export type DbtNode = {
   unique_id: string;
   name: string;
@@ -9,8 +17,9 @@ export type DbtNode = {
   database?: string;
   schema?: string;
   alias?: string;
-  columns?: Record<string, any>;
+  columns?: Record<string, unknown>;
   tags?: string[];
+  meta?: DbtNodeMeta;
 };
 
 export type DbtManifest = {
