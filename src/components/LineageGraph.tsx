@@ -15,6 +15,7 @@ import ReactFlow, {
   type Edge,
   type NodeChange,
   type EdgeChange,
+  type Connection,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGraphStore } from '@/store/useGraphStore';
@@ -29,7 +30,7 @@ const nodeTypes = {
 };
 
 function LineageGraphInner() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, updateNodeMetadata, isBlankProject } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, addEdge, updateNodeMetadata, isBlankProject } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
@@ -40,7 +41,8 @@ function LineageGraphInner() {
   const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
-  const { fitView, getZoom } = useReactFlow();
+  const { fitView, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
@@ -349,6 +351,27 @@ function LineageGraphInner() {
     []
   );
 
+  // Handle new edge connections via drag-from-handle
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (connection.source && connection.target) {
+        addEdge(connection.source, connection.target);
+        // Also update local filtered edges
+        const newEdge = {
+          id: `${connection.source}-${connection.target}`,
+          source: connection.source,
+          target: connection.target,
+          type: 'smoothstep',
+          animated: false,
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b' },
+          style: { stroke: '#64748b', strokeWidth: 2 },
+        };
+        setFilteredEdges((prev) => [...prev, newEdge as Edge]);
+      }
+    },
+    [addEdge]
+  );
+
   // Close context menus on click outside
   useEffect(() => {
     const handleClick = () => {
@@ -373,18 +396,32 @@ function LineageGraphInner() {
     return () => clearInterval(interval);
   }, [getZoom]);
 
+  // Get center position of current viewport for adding new nodes
+  const getViewportCenter = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      return screenToFlowPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+    }
+    // Fallback if container ref not available
+    return { x: 250, y: 150 };
+  }, [screenToFlowPosition]);
+
   // Handler for adding a standalone node (for blank projects)
   const handleAddStandaloneNode = useCallback(
-    (position: { x: number; y: number }) => {
+    (position?: { x: number; y: number }) => {
+      const nodePosition = position || getViewportCenter();
       setCanvasContextMenu(null);
 
-      const newNodeId = addStandaloneNode(position);
+      const newNodeId = addStandaloneNode(nodePosition);
 
       // Update local filtered nodes to include the new node
       const newNode = {
         id: newNodeId,
         type: 'default',
-        position,
+        position: nodePosition,
         data: {
           label: 'New Node',
           type: 'model',
@@ -395,7 +432,7 @@ function LineageGraphInner() {
 
       setFilteredNodes((prev) => [...prev, newNode as Node]);
     },
-    [addStandaloneNode]
+    [addStandaloneNode, getViewportCenter]
   );
 
   // Reset highlighting when clicking on background/pane
@@ -408,7 +445,7 @@ function LineageGraphInner() {
   // Empty state for blank projects
   if (!nodes.length && isBlankProject) {
     return (
-      <div className="w-full h-full relative">
+      <div ref={containerRef} className="w-full h-full relative">
         <ReactFlow
           nodes={[]}
           edges={[]}
@@ -439,7 +476,7 @@ function LineageGraphInner() {
             <p className="text-slate-900 font-medium mb-1">No nodes yet</p>
             <p className="text-sm text-slate-500 mb-4">Right-click anywhere to add a node</p>
             <button
-              onClick={() => handleAddStandaloneNode({ x: 250, y: 150 })}
+              onClick={() => handleAddStandaloneNode()}
               className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
             >
               + Add first node
@@ -504,7 +541,7 @@ function LineageGraphInner() {
   }));
 
   return (
-    <div className="w-full h-full">
+    <div ref={containerRef} className="w-full h-full">
       <ReactFlow
         nodes={styledNodes}
         edges={styledEdges}
@@ -513,6 +550,7 @@ function LineageGraphInner() {
         onNodeContextMenu={onNodeContextMenu}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
         onPaneClick={onPaneClick}
         onPaneContextMenu={(event) => {
           event.preventDefault();
@@ -668,7 +706,7 @@ function LineageGraphInner() {
             Zoom: <span className="font-semibold text-gray-900">{zoomLevel}%</span>
           </span>
           <button
-            onClick={() => handleAddStandaloneNode({ x: 250, y: 150 })}
+            onClick={() => handleAddStandaloneNode()}
             className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1"
             title="Add a new standalone node"
           >

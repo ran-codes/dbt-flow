@@ -87,6 +87,7 @@ export type GraphStore = {
   setEditingNodeId: (nodeId: string | null) => void;
   addDownstreamNode: (parentNodeId: string, position: { x: number; y: number }) => string;
   addStandaloneNode: (position: { x: number; y: number }) => string;
+  addEdge: (sourceId: string, targetId: string) => void;
   updateNodeLabel: (nodeId: string, newLabel: string) => void;
   updateNodeMetadata: (nodeId: string, metadata: {
     label?: string;
@@ -350,16 +351,21 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
 
     workPlan.plannedNodes.forEach((node, index) => {
       lines.push(`### ${index + 1}. ${node.name}`);
+      lines.push(`**ID:** \`${node.id}\``);
       lines.push(`**Type:** ${node.type}`);
       if (node.tags.length > 0) {
         lines.push(`**Tags:** ${node.tags.join(', ')}`);
       }
       if (node.dependsOn.length > 0) {
-        const depNames = node.dependsOn.map((id) => {
+        const depRefs = node.dependsOn.map((id) => {
+          // Check both planned nodes and upstream context for the name
+          const planned = workPlan.plannedNodes.find((p) => p.id === id);
+          if (planned) return `${planned.name} (\`${id}\`)`;
           const upstream = workPlan.upstreamContext.find((u) => u.id === id);
-          return upstream?.name || id;
+          if (upstream) return `${upstream.name} (\`${id}\`)`;
+          return `\`${id}\``;
         });
-        lines.push(`**Depends on:** ${depNames.join(', ')}`);
+        lines.push(`**Depends on:** ${depRefs.join(', ')}`);
       }
       lines.push('');
       if (node.description) {
@@ -467,6 +473,27 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }));
 
     return newNodeId;
+  },
+
+  addEdge: (sourceId, targetId) => {
+    const edgeId = `${sourceId}-${targetId}`;
+    const newEdge: GraphEdge = {
+      id: edgeId,
+      source: sourceId,
+      target: targetId,
+      type: 'smoothstep',
+      animated: false,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#64748b',
+      },
+      style: { stroke: '#64748b', strokeWidth: 2 },
+    };
+
+    set((state) => ({
+      edges: [...state.edges, newEdge],
+      hasUnsavedChanges: true,
+    }));
   },
 
   updateNodeLabel: (nodeId, newLabel) =>
