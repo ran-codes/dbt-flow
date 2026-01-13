@@ -14,6 +14,7 @@ const NODE_TYPES = ['model', 'seed', 'snapshot', 'source', 'test', 'exposure', '
 
 export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetailsPanelProps) {
   const isEditable = node.data.isUserCreated;
+  const [showRawManifest, setShowRawManifest] = useState(false);
 
   // Local state for editable fields
   const [label, setLabel] = useState(node.data.label);
@@ -205,6 +206,31 @@ export default function NodeDetailsPanel({ node, onClose, onUpdate }: NodeDetail
           )
         )}
       </div>
+
+      {/* Raw Manifest (collapsible) */}
+      {!isEditable && node.data.rawManifest && (
+        <div className="mt-4 border-t border-gray-200 pt-4">
+          <button
+            onClick={() => setShowRawManifest(!showRawManifest)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${showRawManifest ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Raw Manifest JSON
+          </button>
+          {showRawManifest && (
+            <pre className="mt-2 text-xs bg-gray-50 p-3 rounded overflow-x-auto max-h-64 overflow-y-auto">
+              <code>{JSON.stringify(node.data.rawManifest, null, 2)}</code>
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ export type GraphNode = Node<{
   inferredTags?: string[];
   isUserCreated?: boolean;
   materialized?: boolean;
+  rawManifest?: Record<string, unknown>;
 }>;
 
 export type GraphEdge = Edge;
@@ -149,6 +150,7 @@ export function buildGraph(dbtNodes: DbtNode[]): { nodes: GraphNode[]; edges: Gr
       schema: node.schema,
       tags: node.tags,
       inferredTags: inferTagsFromName(node.name),
+      rawManifest: node as unknown as Record<string, unknown>, // Store full manifest node for debugging
     },
     style: {
       padding: 0,

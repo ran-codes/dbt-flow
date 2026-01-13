@@ -133,7 +133,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   isBlankProject: false,
   searchQuery: '',
   selectedNode: null,
-  resourceTypeFilters: new Set(['model', 'seed']), // Default: show models and seeds
+  resourceTypeFilters: new Set(['model', 'seed', 'source']), // Default: show models, seeds, and sources
   tagFilters: new Set(), // Default: no tag filters
   tagFilterMode: 'OR', // Default: OR logic
   inferredTagFilters: new Set(), // Default: no inferred tag filters
@@ -235,7 +235,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       generatedAt: '',
       searchQuery: '',
       selectedNode: null,
-      resourceTypeFilters: new Set(['model', 'seed']),
+      resourceTypeFilters: new Set(['model', 'seed', 'source']),
       tagFilters: new Set(),
       tagFilterMode: 'OR',
       inferredTagFilters: new Set(),
@@ -553,7 +553,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       isBlankProject: true,
       searchQuery: '',
       selectedNode: null,
-      resourceTypeFilters: new Set(['model', 'seed']),
+      resourceTypeFilters: new Set(['model', 'seed', 'source']),
       tagFilters: new Set(),
       tagFilterMode: 'OR',
       inferredTagFilters: new Set(),

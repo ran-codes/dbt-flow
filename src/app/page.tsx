@@ -509,6 +509,13 @@ export default function Home() {
                       <span className="text-slate-900">Lakehouse</span>
                       <span className="block text-xs text-slate-500">Multi-layer architecture</span>
                     </button>
+                    <button
+                      onClick={() => handleDemoClick('manifest_lineage_example.json', 'Lineage Example')}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-slate-900">Lineage Example</span>
+                      <span className="block text-xs text-slate-500">Metadata inheritance demo</span>
+                    </button>
                   </div>
                 )}
               </div>
