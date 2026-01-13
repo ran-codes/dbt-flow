@@ -15,15 +15,34 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [jsonText, setJsonText] = useState('');
-  const [showJsonInput, setShowJsonInput] = useState(false);
   const [savedProjects, setSavedProjects] = useState<ProjectMetadata[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [manifestDropdownOpen, setManifestDropdownOpen] = useState(false);
+  const [sampleDropdownOpen, setSampleDropdownOpen] = useState(false);
+  const [activeManifestOption, setActiveManifestOption] = useState<'url' | 'paste' | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const manifestUploadRef = useRef<HTMLInputElement>(null);
+  const manifestDropdownRef = useRef<HTMLDivElement>(null);
+  const sampleDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load saved projects on mount
   useEffect(() => {
     listProjects().then(setSavedProjects);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (manifestDropdownRef.current && !manifestDropdownRef.current.contains(event.target as Node)) {
+        setManifestDropdownOpen(false);
+      }
+      if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target as Node)) {
+        setSampleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
@@ -387,133 +406,193 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Start New Section */}
+        {/* Hidden manifest upload input */}
+        <input
+          ref={manifestUploadRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+
+        {/* Start New Section - Consolidated */}
         <section className="mb-10">
           <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
             Start New
           </h2>
-          <div className="border border-slate-200 rounded-lg p-5">
-            {/* URL Input */}
-            <form onSubmit={handleUrlSubmit} className="mb-5">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                From dbt Docs URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.netlify.app"
-                  className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                  disabled={isLoading}
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:bg-slate-400 transition-colors"
-                >
-                  {isLoading ? 'Loading...' : 'Fetch'}
-                </button>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-500">
-                We'll fetch manifest.json from your dbt docs site
-              </p>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-2 bg-white text-xs text-slate-400">or</span>
-              </div>
-            </div>
-
-            {/* File and JSON options */}
+          <div className="border border-slate-200 rounded-lg p-4">
+            {/* Three buttons in a row */}
             <div className="flex gap-3">
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileUpload}
+              {/* From Manifest Dropdown */}
+              <div className="relative flex-1" ref={manifestDropdownRef}>
+                <button
+                  onClick={() => {
+                    setManifestDropdownOpen(!manifestDropdownOpen);
+                    setSampleDropdownOpen(false);
+                  }}
                   disabled={isLoading}
-                  className="hidden"
-                />
-                <span className="block px-4 py-2.5 text-sm font-medium text-slate-700 text-center border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">
-                  Upload manifest.json
-                </span>
-              </label>
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  From Manifest
+                  <svg className={`w-4 h-4 transition-transform ${manifestDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {manifestDropdownOpen && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
+                    <button
+                      onClick={() => {
+                        setActiveManifestOption('url');
+                        setManifestDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                    >
+                      Enter URL
+                    </button>
+                    <button
+                      onClick={() => {
+                        manifestUploadRef.current?.click();
+                        setManifestDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                    >
+                      Upload file
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveManifestOption('paste');
+                        setManifestDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                    >
+                      Paste JSON
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Sample Project Dropdown */}
+              <div className="relative flex-1" ref={sampleDropdownRef}>
+                <button
+                  onClick={() => {
+                    setSampleDropdownOpen(!sampleDropdownOpen);
+                    setManifestDropdownOpen(false);
+                  }}
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  Sample Project
+                  <svg className={`w-4 h-4 transition-transform ${sampleDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {sampleDropdownOpen && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
+                    <button
+                      onClick={() => handleDemoClick('manifest_jaffle_active_v0_0_1.json', 'Jaffle Shop')}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-slate-900">Jaffle Shop</span>
+                      <span className="block text-xs text-slate-500">Classic dbt tutorial</span>
+                    </button>
+                    <button
+                      onClick={() => handleDemoClick('test.json', 'Data Warehouse')}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-slate-900">Data Warehouse</span>
+                      <span className="block text-xs text-slate-500">Custom layers</span>
+                    </button>
+                    <button
+                      onClick={() => handleDemoClick('manifest_salurbal_api_v1_2_2.json', 'Lakehouse')}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-slate-900">Lakehouse</span>
+                      <span className="block text-xs text-slate-500">Multi-layer architecture</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Blank Project Button */}
               <button
-                onClick={() => setShowJsonInput(!showJsonInput)}
+                onClick={() => router.push('/visualize?blank=true')}
                 disabled={isLoading}
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
               >
-                {showJsonInput ? 'Hide JSON input' : 'Paste JSON'}
+                Blank Project
               </button>
             </div>
 
-            {/* JSON Input Area */}
-            {showJsonInput && (
-              <div className="mt-4">
+            {/* Expanded options below buttons */}
+            {activeManifestOption === 'url' && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <form onSubmit={handleUrlSubmit}>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    dbt Docs URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://example.netlify.app"
+                      className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                      disabled={isLoading}
+                      autoFocus
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:bg-slate-400 transition-colors"
+                    >
+                      {isLoading ? 'Loading...' : 'Fetch'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveManifestOption(null)}
+                      className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activeManifestOption === 'paste' && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Paste manifest.json
+                </label>
                 <textarea
                   value={jsonText}
                   onChange={(e) => setJsonText(e.target.value)}
                   placeholder="Paste your manifest.json content here..."
                   disabled={isLoading}
+                  autoFocus
                   className="w-full h-40 px-3 py-2 text-sm font-mono border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-y"
                 />
-                <button
-                  onClick={handleJsonPaste}
-                  disabled={isLoading || !jsonText.trim()}
-                  className="mt-2 w-full px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:bg-slate-400 transition-colors"
-                >
-                  {isLoading ? 'Parsing...' : 'Parse & Visualize'}
-                </button>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={handleJsonPaste}
+                    disabled={isLoading || !jsonText.trim()}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:bg-slate-400 transition-colors"
+                  >
+                    {isLoading ? 'Parsing...' : 'Parse & Visualize'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveManifestOption(null);
+                      setJsonText('');
+                    }}
+                    className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Sample Projects Section */}
-        <section>
-          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
-            Sample Projects
-          </h2>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              {
-                name: 'Jaffle Shop',
-                description: 'Classic dbt tutorial with staging & marts',
-                manifest: 'manifest_jaffle_active_v0_0_1.json',
-              },
-              {
-                name: 'Data Warehouse',
-                description: 'Production warehouse with custom layers',
-                manifest: 'test.json',
-              },
-              {
-                name: 'Lakehouse',
-                description: 'Modern multi-layer architecture',
-                manifest: 'manifest_salurbal_api_v1_2_2.json',
-              },
-            ].map((sample) => (
-              <div
-                key={sample.name}
-                className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
-              >
-                <p className="font-medium text-slate-900 mb-1">{sample.name}</p>
-                <p className="text-sm text-slate-500 mb-3">{sample.description}</p>
-                <button
-                  onClick={() => handleDemoClick(sample.manifest, sample.name)}
-                  disabled={isLoading}
-                  className="w-full px-3 py-1.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                >
-                  Open
-                </button>
-              </div>
-            ))}
           </div>
         </section>
 

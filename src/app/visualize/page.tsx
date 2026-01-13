@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useGraphStore } from '@/store/useGraphStore';
@@ -25,7 +25,7 @@ const LineageGraph = dynamic(() => import('@/components/LineageGraph'), {
   ),
 });
 
-export default function VisualizePage() {
+function VisualizeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -40,10 +40,12 @@ export default function VisualizePage() {
     currentProjectId,
     savedProjectName,
     hasUnsavedChanges,
+    isBlankProject,
     setCurrentProjectId,
     setSavedProjectName,
     markSaved,
     loadSavedProject,
+    startBlankProject,
     resourceTypeFilters,
     tagFilters,
     tagFilterMode,
@@ -59,20 +61,30 @@ export default function VisualizePage() {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const projectLoadedRef = useRef(false);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Load project from URL param
+  // Load project from URL param or start blank project
   useEffect(() => {
     if (!mounted || projectLoadedRef.current) return;
 
     const projectId = searchParams.get('project');
-    if (projectId && nodes.length === 0) {
+    const isBlank = searchParams.get('blank') === 'true';
+
+    if (isBlank && !isBlankProject) {
+      projectLoadedRef.current = true;
+      startBlankProject();
+      // Clean up URL
+      router.replace('/visualize');
+    } else if (projectId && nodes.length === 0) {
       projectLoadedRef.current = true;
       loadProject(projectId).then((project) => {
         if (project) {
@@ -92,14 +104,14 @@ export default function VisualizePage() {
         }
       });
     }
-  }, [mounted, searchParams, nodes.length, loadSavedProject, router]);
+  }, [mounted, searchParams, nodes.length, loadSavedProject, router, isBlankProject, startBlankProject]);
 
-  // Redirect to home if no data and no project param
+  // Redirect to home if no data, no project param, and not blank project
   useEffect(() => {
-    if (mounted && nodes.length === 0 && !searchParams.get('project')) {
+    if (mounted && nodes.length === 0 && !searchParams.get('project') && !searchParams.get('blank') && !isBlankProject) {
       router.push('/');
     }
-  }, [mounted, nodes.length, router, searchParams]);
+  }, [mounted, nodes.length, router, searchParams, isBlankProject]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -259,6 +271,38 @@ export default function VisualizePage() {
     }
   }, [currentProjectId, savedProjectName]);
 
+  const handleStartEditTitle = () => {
+    setEditedTitle(savedProjectName || projectName);
+    setIsEditingTitle(true);
+    setTimeout(() => titleInputRef.current?.focus(), 0);
+  };
+
+  const handleSaveTitle = () => {
+    const newTitle = editedTitle.trim();
+    if (newTitle && newTitle !== (savedProjectName || projectName)) {
+      setSavedProjectName(newTitle);
+      // Mark as unsaved so it will auto-save
+      if (currentProjectId) {
+        // Trigger a save with the new name
+        doSave(newTitle);
+      }
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelEditTitle = () => {
+    setIsEditingTitle(false);
+    setEditedTitle('');
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveTitle();
+    } else if (e.key === 'Escape') {
+      handleCancelEditTitle();
+    }
+  };
+
   const doSave = async (name: string) => {
     setIsSaving(true);
     setSaveStatus('saving');
@@ -305,7 +349,7 @@ export default function VisualizePage() {
   const plannedNodeCount = nodes.filter(n => n.data.isUserCreated).length;
 
   // Show loading while project is being loaded from URL param
-  if (!mounted || (nodes.length === 0 && searchParams.get('project'))) {
+  if (!mounted || (nodes.length === 0 && searchParams.get('project') && !isBlankProject)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
@@ -313,7 +357,8 @@ export default function VisualizePage() {
     );
   }
 
-  if (nodes.length === 0) {
+  // Don't render null for blank projects - they start with 0 nodes
+  if (nodes.length === 0 && !isBlankProject) {
     return null;
   }
 
@@ -331,9 +376,28 @@ export default function VisualizePage() {
           <div className="h-6 w-px bg-slate-200"></div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold text-slate-900">
-                {savedProjectName || projectName}
-              </h1>
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onBlur={handleSaveTitle}
+                  onKeyDown={handleTitleKeyDown}
+                  className="text-lg font-semibold text-slate-900 bg-transparent border-b-2 border-slate-900 outline-none px-0 py-0"
+                  style={{ width: `${Math.max(editedTitle.length, 10)}ch` }}
+                />
+              ) : (
+                <button
+                  onClick={handleStartEditTitle}
+                  className="text-lg font-semibold text-slate-900 hover:bg-slate-100 px-1 -mx-1 rounded transition-colors group flex items-center gap-1"
+                >
+                  {savedProjectName || projectName}
+                  <svg className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              )}
               {hasUnsavedChanges && (
                 <span className="w-2 h-2 rounded-full bg-amber-500" title="Unsaved changes" />
               )}
@@ -435,5 +499,19 @@ export default function VisualizePage() {
         isSaving={isSaving}
       />
     </div>
+  );
+}
+
+export default function VisualizePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
+        </div>
+      }
+    >
+      <VisualizeContent />
+    </Suspense>
   );
 }

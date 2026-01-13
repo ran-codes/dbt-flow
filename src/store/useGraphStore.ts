@@ -53,6 +53,7 @@ export type GraphStore = {
   currentProjectId: string | null;
   savedProjectName: string;
   hasUnsavedChanges: boolean;
+  isBlankProject: boolean;
 
   // UI state
   searchQuery: string;
@@ -85,6 +86,7 @@ export type GraphStore = {
   // Node editing actions
   setEditingNodeId: (nodeId: string | null) => void;
   addDownstreamNode: (parentNodeId: string, position: { x: number; y: number }) => string;
+  addStandaloneNode: (position: { x: number; y: number }) => string;
   updateNodeLabel: (nodeId: string, newLabel: string) => void;
   updateNodeMetadata: (nodeId: string, metadata: {
     label?: string;
@@ -99,6 +101,7 @@ export type GraphStore = {
   setSavedProjectName: (name: string) => void;
   markSaved: () => void;
   markUnsaved: () => void;
+  startBlankProject: () => void;
   loadSavedProject: (
     nodes: GraphNode[],
     edges: GraphEdge[],
@@ -125,6 +128,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   currentProjectId: null,
   savedProjectName: '',
   hasUnsavedChanges: false,
+  isBlankProject: false,
   searchQuery: '',
   selectedNode: null,
   resourceTypeFilters: new Set(['model', 'seed']), // Default: show models and seeds
@@ -438,6 +442,32 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     return newNodeId;
   },
 
+  addStandaloneNode: (position) => {
+    const newNodeId = `planned-${Date.now()}`;
+
+    const newNode: GraphNode = {
+      id: newNodeId,
+      type: 'default',
+      position,
+      data: {
+        label: 'New Node',
+        type: 'model',
+        tags: [],
+        description: '',
+        isUserCreated: true,
+        sql: '',
+      },
+    };
+
+    set((state) => ({
+      nodes: [...state.nodes, newNode],
+      editingNodeId: newNodeId, // Immediately enter edit mode
+      hasUnsavedChanges: true,
+    }));
+
+    return newNodeId;
+  },
+
   updateNodeLabel: (nodeId, newLabel) =>
     set((state) => ({
       nodes: state.nodes.map((node) =>
@@ -479,6 +509,26 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
 
   markUnsaved: () =>
     set({ hasUnsavedChanges: true }),
+
+  startBlankProject: () =>
+    set({
+      nodes: [],
+      edges: [],
+      projectName: 'Untitled Project',
+      generatedAt: new Date().toISOString(),
+      currentProjectId: null,
+      savedProjectName: '',
+      hasUnsavedChanges: false,
+      isBlankProject: true,
+      searchQuery: '',
+      selectedNode: null,
+      resourceTypeFilters: new Set(['model', 'seed']),
+      tagFilters: new Set(),
+      tagFilterMode: 'OR',
+      inferredTagFilters: new Set(),
+      inferredTagFilterMode: 'OR',
+      editingNodeId: null,
+    }),
 
   loadSavedProject: (nodes, edges, projectId, projectName, sourceProjectName, generatedAt, filters) =>
     set({

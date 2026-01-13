@@ -29,7 +29,7 @@ const nodeTypes = {
 };
 
 function LineageGraphInner() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, updateNodeMetadata } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, updateNodeMetadata, isBlankProject } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
@@ -37,6 +37,7 @@ function LineageGraphInner() {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [hiddenNodes, setHiddenNodes] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
   const { fitView, getZoom } = useReactFlow();
@@ -339,9 +340,12 @@ function LineageGraphInner() {
     []
   );
 
-  // Close context menu on click outside
+  // Close context menus on click outside
   useEffect(() => {
-    const handleClick = () => setContextMenu(null);
+    const handleClick = () => {
+      setContextMenu(null);
+      setCanvasContextMenu(null);
+    };
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
@@ -359,6 +363,98 @@ function LineageGraphInner() {
 
     return () => clearInterval(interval);
   }, [getZoom]);
+
+  // Handler for adding a standalone node (for blank projects)
+  const handleAddStandaloneNode = useCallback(
+    (position: { x: number; y: number }) => {
+      setCanvasContextMenu(null);
+
+      const newNodeId = addStandaloneNode(position);
+
+      // Update local filtered nodes to include the new node
+      const newNode = {
+        id: newNodeId,
+        type: 'default',
+        position,
+        data: {
+          label: 'New Node',
+          type: 'model',
+          isUserCreated: true,
+          materialized: false,
+        },
+      };
+
+      setFilteredNodes((prev) => [...prev, newNode as Node]);
+    },
+    [addStandaloneNode]
+  );
+
+  // Reset highlighting when clicking on background/pane
+  // NOTE: Must be defined before any early returns to satisfy React hooks rules
+  const onPaneClick = useCallback(() => {
+    setHighlightedNodes(new Set());
+    setHighlightedEdges(new Set());
+  }, []);
+
+  // Empty state for blank projects
+  if (!nodes.length && isBlankProject) {
+    return (
+      <div className="w-full h-full relative">
+        <ReactFlow
+          nodes={[]}
+          edges={[]}
+          nodeTypes={nodeTypes}
+          onPaneContextMenu={(event) => {
+            event.preventDefault();
+            // Get flow position from screen coordinates
+            const bounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+            if (bounds) {
+              const x = event.clientX - bounds.left;
+              const y = event.clientY - bounds.top;
+              setCanvasContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+                flowPosition: { x: x - 100, y: y - 50 }, // Center the node on click
+              });
+            }
+          }}
+          fitView
+        >
+          <Background color="#e2e8f0" gap={20} />
+          <Controls />
+        </ReactFlow>
+
+        {/* Empty state overlay */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-white border border-slate-200 rounded-lg px-8 py-6 text-center shadow-sm pointer-events-auto">
+            <p className="text-slate-900 font-medium mb-1">No nodes yet</p>
+            <p className="text-sm text-slate-500 mb-4">Right-click anywhere to add a node</p>
+            <button
+              onClick={() => handleAddStandaloneNode({ x: 250, y: 150 })}
+              className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+            >
+              + Add first node
+            </button>
+          </div>
+        </div>
+
+        {/* Canvas context menu */}
+        {canvasContextMenu && (
+          <div
+            className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50"
+            style={{ left: canvasContextMenu.x, top: canvasContextMenu.y }}
+          >
+            <button
+              onClick={() => handleAddStandaloneNode(canvasContextMenu.flowPosition)}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors text-slate-700"
+            >
+              Add node
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (!nodes.length) {
     return (
@@ -397,12 +493,6 @@ function LineageGraphInner() {
     },
     animated: highlightedEdges.has(edge.id),
   }));
-
-  // Reset highlighting when clicking on background/pane
-  const onPaneClick = useCallback(() => {
-    setHighlightedNodes(new Set());
-    setHighlightedEdges(new Set());
-  }, []);
 
   return (
     <div className="w-full h-full">
