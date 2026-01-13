@@ -7,6 +7,8 @@ import { useGraphStore } from '@/store/useGraphStore';
 import ExportModal from '@/components/ExportModal';
 import SaveProjectModal from '@/components/SaveProjectModal';
 import { loadProject, saveProject } from '@/lib/storageService';
+import { buildGraph } from '@/lib/graphBuilder';
+import { type DbtManifest } from '@/lib/manifestParser';
 import {
   generateProjectId,
   createMetadata,
@@ -14,6 +16,15 @@ import {
   deserializeFilters,
   type SavedProject,
 } from '@/lib/persistence';
+
+// Sample project mappings
+const SAMPLE_PROJECTS: Record<string, { file: string; name: string }> = {
+  'jaffle': { file: 'manifest_jaffle_active_v0_0_1.json', name: 'Jaffle Shop' },
+  'warehouse': { file: 'test.json', name: 'Data Warehouse' },
+  'lakehouse': { file: 'manifest_salurbal_api_v1_2_2.json', name: 'Lakehouse' },
+  'lineage': { file: 'manifest_lineage_example.json', name: 'Lineage Example' },
+  'salurbal': { file: 'manifest_lineage_example.json', name: 'SALURBAL Mortality' },
+};
 
 // Import LineageGraph dynamically to avoid SSR issues with ReactFlow
 const LineageGraph = dynamic(() => import('@/components/LineageGraph'), {
@@ -35,6 +46,7 @@ function VisualizeContent() {
     generatedAt,
     searchQuery,
     setSearchQuery,
+    setGraph,
     exportWorkPlan,
     exportWorkPlanMarkdown,
     currentProjectId,
@@ -78,6 +90,7 @@ function VisualizeContent() {
     if (!mounted || projectLoadedRef.current) return;
 
     const projectId = searchParams.get('project');
+    const sampleId = searchParams.get('sample');
     const isBlank = searchParams.get('blank') === 'true';
 
     if (isBlank && !isBlankProject) {
@@ -85,6 +98,48 @@ function VisualizeContent() {
       startBlankProject();
       // Clean up URL
       router.replace('/visualize');
+    } else if (sampleId && nodes.length === 0) {
+      // Load sample project
+      const sample = SAMPLE_PROJECTS[sampleId.toLowerCase()];
+      if (sample) {
+        projectLoadedRef.current = true;
+        const loadSample = async () => {
+          try {
+            const currentPath = window.location.pathname.endsWith('/')
+              ? window.location.pathname.slice(0, -1)
+              : window.location.pathname;
+            // Go up from /visualize to root
+            const basePath = currentPath.replace('/visualize', '');
+            const manifestUrl = `${window.location.origin}${basePath}/${sample.file}`;
+            const response = await fetch(manifestUrl);
+
+            if (!response.ok) {
+              throw new Error(`Failed to load sample (${response.status})`);
+            }
+
+            const manifest = await response.json() as DbtManifest;
+            const parsed = {
+              nodes: [
+                ...Object.values(manifest.nodes || {}),
+                ...Object.values(manifest.sources || {}),
+                ...Object.values(manifest.seeds || {})
+              ],
+              projectName: manifest.metadata?.project_name || sample.name,
+              generatedAt: manifest.metadata?.generated_at || new Date().toISOString()
+            };
+
+            const { nodes: graphNodes, edges: graphEdges } = buildGraph(parsed.nodes);
+            setGraph(graphNodes, graphEdges, parsed);
+          } catch (err) {
+            console.error('Failed to load sample:', err);
+            router.push('/');
+          }
+        };
+        loadSample();
+      } else {
+        // Unknown sample, redirect to home
+        router.push('/');
+      }
     } else if (projectId && nodes.length === 0) {
       projectLoadedRef.current = true;
       loadProject(projectId).then((project) => {
@@ -105,11 +160,11 @@ function VisualizeContent() {
         }
       });
     }
-  }, [mounted, searchParams, nodes.length, loadSavedProject, router, isBlankProject, startBlankProject]);
+  }, [mounted, searchParams, nodes.length, loadSavedProject, router, isBlankProject, startBlankProject, setGraph]);
 
-  // Redirect to home if no data, no project param, and not blank project
+  // Redirect to home if no data, no project param, no sample param, and not blank project
   useEffect(() => {
-    if (mounted && nodes.length === 0 && !searchParams.get('project') && !searchParams.get('blank') && !isBlankProject) {
+    if (mounted && nodes.length === 0 && !searchParams.get('project') && !searchParams.get('sample') && !searchParams.get('blank') && !isBlankProject) {
       router.push('/');
     }
   }, [mounted, nodes.length, router, searchParams, isBlankProject]);
@@ -262,6 +317,36 @@ function VisualizeContent() {
     setIsDropdownOpen(false);
   };
 
+  const handleExportMinimalGraph = () => {
+    // Minimal graph structure - just enough to reconstruct the DAG
+    const minimalGraph = {
+      projectName,
+      generatedAt,
+      nodes: nodes.map(n => ({
+        id: n.id,
+        label: n.data.label,
+        type: n.data.type,
+        ...(n.data.description && { description: n.data.description }),
+      })),
+      edges: edges.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(minimalGraph, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${savedProjectName || projectName}-graph.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setIsDropdownOpen(false);
+  };
+
   const handleSaveClick = useCallback(() => {
     if (currentProjectId) {
       // Existing project - save directly
@@ -351,7 +436,7 @@ function VisualizeContent() {
   const plannedNodeCount = nodes.filter(n => n.data.isUserCreated).length;
 
   // Show loading while project is being loaded from URL param
-  if (!mounted || (nodes.length === 0 && searchParams.get('project') && !isBlankProject)) {
+  if (!mounted || (nodes.length === 0 && (searchParams.get('project') || searchParams.get('sample')) && !isBlankProject)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
@@ -468,8 +553,15 @@ function VisualizeContent() {
                   onClick={handleExportProject}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
                 >
-                  <span className="text-xs font-medium text-slate-500 w-8">FILE</span>
-                  <span className="text-slate-700">Download as JSON</span>
+                  <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
+                  <span className="text-slate-700">Full Project</span>
+                </button>
+                <button
+                  onClick={handleExportMinimalGraph}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
+                >
+                  <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
+                  <span className="text-slate-700">Minimal Graph</span>
                 </button>
               </div>
             )}

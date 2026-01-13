@@ -3,55 +3,159 @@
     "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
     "dbt_version": "1.10.0",
     "generated_at": "2026-01-13T00:00:00.000000Z",
-    "project_name": "lineage_example",
+    "project_name": "salurbal_mortality",
     "adapter_type": "duckdb"
   },
   "nodes": {
-    "model.lineage_example.base__mexico_mortality": {
+    "model.salurbal_mortality.stg__din_mx": {
       "database": "dev",
-      "schema": "base",
-      "name": "base__mexico_mortality",
+      "schema": "staging",
+      "name": "stg__din_mx",
       "resource_type": "model",
-      "package_name": "lineage_example",
-      "unique_id": "model.lineage_example.base__mexico_mortality",
-      "description": "Cleaned and standardized Mexico mortality data",
-      "tags": ["base", "mexico"],
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.stg__din_mx",
+      "description": "Staged Mexico mortality data with standardized column names",
+      "tags": ["staging", "mortality", "mexico"],
       "depends_on": {
-        "nodes": ["source.lineage_example.raw_data.source__mexico_mortality"]
+        "nodes": ["source.salurbal_mortality.raw.source__din_mx"]
       },
       "config": {
-        "materialized": "table"
+        "materialized": "view"
       }
     },
-    "model.lineage_example.base__brazil_mortality": {
+    "model.salurbal_mortality.stg__din_br": {
       "database": "dev",
-      "schema": "base",
-      "name": "base__brazil_mortality",
+      "schema": "staging",
+      "name": "stg__din_br",
       "resource_type": "model",
-      "package_name": "lineage_example",
-      "unique_id": "model.lineage_example.base__brazil_mortality",
-      "description": "Cleaned and standardized Brazil mortality data",
-      "tags": ["base", "brazil"],
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.stg__din_br",
+      "description": "Staged Brazil mortality data with standardized column names",
+      "tags": ["staging", "mortality", "brazil"],
       "depends_on": {
-        "nodes": ["source.lineage_example.raw_data.source__brazil_mortality"]
+        "nodes": ["source.salurbal_mortality.raw.source__din_br"]
       },
       "config": {
-        "materialized": "table"
+        "materialized": "view"
       }
     },
-    "model.lineage_example.int__harmonized_mortality": {
+    "model.salurbal_mortality.stg__din_cl": {
+      "database": "dev",
+      "schema": "staging",
+      "name": "stg__din_cl",
+      "resource_type": "model",
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.stg__din_cl",
+      "description": "Staged Chile mortality data with standardized column names",
+      "tags": ["staging", "mortality", "chile"],
+      "depends_on": {
+        "nodes": ["source.salurbal_mortality.raw.source__din_cl"]
+      },
+      "config": {
+        "materialized": "view"
+      }
+    },
+    "model.salurbal_mortality.stg__prj_mx": {
+      "database": "dev",
+      "schema": "staging",
+      "name": "stg__prj_mx",
+      "resource_type": "model",
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.stg__prj_mx",
+      "description": "Staged Mexico population projections with standardized schema",
+      "tags": ["staging", "population", "mexico"],
+      "depends_on": {
+        "nodes": ["source.salurbal_mortality.raw.source__prj_mx"]
+      },
+      "config": {
+        "materialized": "view"
+      }
+    },
+    "model.salurbal_mortality.stg__prj_br": {
+      "database": "dev",
+      "schema": "staging",
+      "name": "stg__prj_br",
+      "resource_type": "model",
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.stg__prj_br",
+      "description": "Staged Brazil population projections with standardized schema",
+      "tags": ["staging", "population", "brazil"],
+      "depends_on": {
+        "nodes": ["source.salurbal_mortality.raw.source__prj_br"]
+      },
+      "config": {
+        "materialized": "view"
+      }
+    },
+    "model.salurbal_mortality.stg__prj_cl": {
+      "database": "dev",
+      "schema": "staging",
+      "name": "stg__prj_cl",
+      "resource_type": "model",
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.stg__prj_cl",
+      "description": "Staged Chile population projections with standardized schema",
+      "tags": ["staging", "population", "chile"],
+      "depends_on": {
+        "nodes": ["source.salurbal_mortality.raw.source__prj_cl"]
+      },
+      "config": {
+        "materialized": "view"
+      }
+    },
+    "model.salurbal_mortality.int__mortality_harmonized": {
       "database": "dev",
       "schema": "intermediate",
-      "name": "int__harmonized_mortality",
+      "name": "int__mortality_harmonized",
       "resource_type": "model",
-      "package_name": "lineage_example",
-      "unique_id": "model.lineage_example.int__harmonized_mortality",
-      "description": "Combined harmonized mortality data from all countries",
-      "tags": ["intermediate", "final"],
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.int__mortality_harmonized",
+      "description": "Harmonized mortality records from all countries with unified age groups and cause codes",
+      "tags": ["intermediate", "mortality"],
       "depends_on": {
         "nodes": [
-          "model.lineage_example.base__mexico_mortality",
-          "model.lineage_example.base__brazil_mortality"
+          "model.salurbal_mortality.stg__din_mx",
+          "model.salurbal_mortality.stg__din_br",
+          "model.salurbal_mortality.stg__din_cl"
+        ]
+      },
+      "config": {
+        "materialized": "table"
+      }
+    },
+    "model.salurbal_mortality.int__population_projections": {
+      "database": "dev",
+      "schema": "intermediate",
+      "name": "int__population_projections",
+      "resource_type": "model",
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.int__population_projections",
+      "description": "Combined population projections from all countries with standardized demographic breakdowns",
+      "tags": ["intermediate", "population"],
+      "depends_on": {
+        "nodes": [
+          "model.salurbal_mortality.stg__prj_mx",
+          "model.salurbal_mortality.stg__prj_br",
+          "model.salurbal_mortality.stg__prj_cl"
+        ]
+      },
+      "config": {
+        "materialized": "table"
+      }
+    },
+    "model.salurbal_mortality.mart__mortality_rates": {
+      "database": "dev",
+      "schema": "mart",
+      "name": "mart__mortality_rates",
+      "resource_type": "model",
+      "package_name": "salurbal_mortality",
+      "unique_id": "model.salurbal_mortality.mart__mortality_rates",
+      "description": "Final mortality rates by country, age group, sex, and cause of death - ready for analysis",
+      "tags": ["mart", "final"],
+      "depends_on": {
+        "nodes": [
+          "model.salurbal_mortality.int__mortality_harmonized",
+          "model.salurbal_mortality.int__population_projections"
         ]
       },
       "config": {
@@ -60,50 +164,152 @@
     }
   },
   "sources": {
-    "source.lineage_example.raw_data.source__mexico_mortality": {
+    "source.salurbal_mortality.raw.source__din_mx": {
       "database": "raw",
-      "schema": "raw_data",
-      "name": "source__mexico_mortality",
-      "source_name": "raw_data",
+      "schema": "raw",
+      "name": "source__din_mx",
+      "source_name": "raw",
       "resource_type": "source",
-      "package_name": "lineage_example",
-      "unique_id": "source.lineage_example.raw_data.source__mexico_mortality",
-      "description": "Raw mortality statistics from Mexico Health Ministry",
-      "tags": ["source", "mexico", "mortality"],
+      "package_name": "salurbal_mortality",
+      "unique_id": "source.salurbal_mortality.raw.source__din_mx",
+      "description": "Raw mortality microdata from Mexico INEGI",
+      "tags": ["source", "mortality", "mexico"],
       "meta": {
         "to_propagate": [
           {
             "composite_keys": {
-              "iso2": "mx",
-              "year": "2024"
+              "iso2": "mx"
             },
-            "source_file_name": "mexico_mortality_2024.csv",
-            "source_label": "Mexico Health Ministry",
-            "source_data_sharing_policy": "internal"
+            "source_label": "INEGI - Mexico National Statistics",
+            "data_policy": "dmc-only",
+            "data_type": "mortality",
+            "year_range": "2010-2023",
+            "granularity": "individual"
           }
         ]
       }
     },
-    "source.lineage_example.raw_data.source__brazil_mortality": {
+    "source.salurbal_mortality.raw.source__din_br": {
       "database": "raw",
-      "schema": "raw_data",
-      "name": "source__brazil_mortality",
-      "source_name": "raw_data",
+      "schema": "raw",
+      "name": "source__din_br",
+      "source_name": "raw",
       "resource_type": "source",
-      "package_name": "lineage_example",
-      "unique_id": "source.lineage_example.raw_data.source__brazil_mortality",
-      "description": "Raw mortality statistics from Brazil Health Ministry",
-      "tags": ["source", "brazil", "mortality"],
+      "package_name": "salurbal_mortality",
+      "unique_id": "source.salurbal_mortality.raw.source__din_br",
+      "description": "Raw mortality microdata from Brazil SIM/DATASUS",
+      "tags": ["source", "mortality", "brazil"],
       "meta": {
         "to_propagate": [
           {
             "composite_keys": {
-              "iso2": "br",
-              "year": "2024"
+              "iso2": "br"
             },
-            "source_file_name": "brazil_mortality_2024.csv",
-            "source_label": "Brazil Health Ministry",
-            "source_data_sharing_policy": "public"
+            "source_label": "DATASUS - Brazil Health Ministry",
+            "data_policy": "dmc-only",
+            "data_type": "mortality",
+            "year_range": "2010-2022",
+            "granularity": "individual"
+          }
+        ]
+      }
+    },
+    "source.salurbal_mortality.raw.source__din_cl": {
+      "database": "raw",
+      "schema": "raw",
+      "name": "source__din_cl",
+      "source_name": "raw",
+      "resource_type": "source",
+      "package_name": "salurbal_mortality",
+      "unique_id": "source.salurbal_mortality.raw.source__din_cl",
+      "description": "Raw mortality microdata from Chile DEIS",
+      "tags": ["source", "mortality", "chile"],
+      "meta": {
+        "to_propagate": [
+          {
+            "composite_keys": {
+              "iso2": "cl"
+            },
+            "source_label": "DEIS - Chile Health Statistics",
+            "data_policy": "dmc-only",
+            "data_type": "mortality",
+            "year_range": "2010-2023",
+            "granularity": "individual"
+          }
+        ]
+      }
+    },
+    "source.salurbal_mortality.raw.source__prj_mx": {
+      "database": "raw",
+      "schema": "raw",
+      "name": "source__prj_mx",
+      "source_name": "raw",
+      "resource_type": "source",
+      "package_name": "salurbal_mortality",
+      "unique_id": "source.salurbal_mortality.raw.source__prj_mx",
+      "description": "Population projections for Mexico from CONAPO",
+      "tags": ["source", "population", "mexico"],
+      "meta": {
+        "to_propagate": [
+          {
+            "composite_keys": {
+              "iso2": "mx"
+            },
+            "source_label": "CONAPO - Mexico Population Council",
+            "data_policy": "salurbal-internal-only",
+            "data_type": "population",
+            "year_range": "2010-2050",
+            "granularity": "aggregate"
+          }
+        ]
+      }
+    },
+    "source.salurbal_mortality.raw.source__prj_br": {
+      "database": "raw",
+      "schema": "raw",
+      "name": "source__prj_br",
+      "source_name": "raw",
+      "resource_type": "source",
+      "package_name": "salurbal_mortality",
+      "unique_id": "source.salurbal_mortality.raw.source__prj_br",
+      "description": "Population projections for Brazil from IBGE",
+      "tags": ["source", "population", "brazil"],
+      "meta": {
+        "to_propagate": [
+          {
+            "composite_keys": {
+              "iso2": "br"
+            },
+            "source_label": "IBGE - Brazil Statistics Institute",
+            "data_policy": "salurbal-internal-only",
+            "data_type": "population",
+            "year_range": "2010-2060",
+            "granularity": "aggregate"
+          }
+        ]
+      }
+    },
+    "source.salurbal_mortality.raw.source__prj_cl": {
+      "database": "raw",
+      "schema": "raw",
+      "name": "source__prj_cl",
+      "source_name": "raw",
+      "resource_type": "source",
+      "package_name": "salurbal_mortality",
+      "unique_id": "source.salurbal_mortality.raw.source__prj_cl",
+      "description": "Population projections for Chile from INE",
+      "tags": ["source", "population", "chile"],
+      "meta": {
+        "to_propagate": [
+          {
+            "composite_keys": {
+              "iso2": "cl"
+            },
+            "source_label": "INE - Chile National Statistics",
+            "data_policy": "salurbal-internal-only",
+            "data_type": "population",
+            "year_range": "2010-2050",
+            "granularity": "aggregate"
           }
         ]
       }

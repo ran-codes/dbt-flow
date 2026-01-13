@@ -122,12 +122,11 @@ function LineageGraphInner() {
     (event, node) => {
       setSelectedNode(node as any);
 
-      // Get all ancestors (upstream) and descendants (downstream)
+      // Get all ancestors (upstream) - shows "where does this data come from?"
       const ancestors = getAncestors(node.id, filteredNodes, filteredEdges);
-      const descendants = getDescendants(node.id, filteredNodes, filteredEdges);
 
-      // Combine all related nodes
-      const allRelatedNodes = new Set([...ancestors, ...descendants]);
+      // Highlight selected node + all upstream ancestors
+      const allRelatedNodes = new Set([node.id, ...ancestors]);
       setHighlightedNodes(allRelatedNodes);
 
       // Find all edges that connect the related nodes
