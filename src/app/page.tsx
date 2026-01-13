@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchManifest, parseManifestFile, type DbtManifest } from '@/lib/manifestParser';
 import { buildGraph } from '@/lib/graphBuilder';
 import { useGraphStore } from '@/store/useGraphStore';
+import { listProjects, deleteProject } from '@/lib/storageService';
+import type { ProjectMetadata } from '@/lib/persistence';
 
 export default function Home() {
   const router = useRouter();
@@ -14,6 +16,13 @@ export default function Home() {
   const [error, setError] = useState('');
   const [jsonText, setJsonText] = useState('');
   const [showJsonInput, setShowJsonInput] = useState(false);
+  const [savedProjects, setSavedProjects] = useState<ProjectMetadata[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Load saved projects on mount
+  useEffect(() => {
+    listProjects().then(setSavedProjects);
+  }, []);
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,21 +42,15 @@ export default function Home() {
   };
 
   const handleDemoClick = async (manifestFileName: string, projectName: string) => {
-    console.log(`=== DEMO BUTTON CLICKED: ${projectName} ===`);
-    console.log('Manifest file:', manifestFileName);
-
     setError('');
     setIsLoading(true);
 
     try {
-      // Load the demo manifest from public folder
       const currentPath = window.location.pathname.endsWith('/')
         ? window.location.pathname.slice(0, -1)
         : window.location.pathname;
 
       const manifestUrl = `${window.location.origin}${currentPath}/${manifestFileName}`;
-      console.log('Fetching:', manifestUrl);
-
       const response = await fetch(manifestUrl);
 
       if (!response.ok) {
@@ -55,7 +58,6 @@ export default function Home() {
       }
 
       const manifest = await response.json() as DbtManifest;
-      console.log('✅ Demo manifest loaded successfully');
 
       const parsed = {
         nodes: [
@@ -68,12 +70,9 @@ export default function Home() {
       };
 
       const { nodes, edges } = buildGraph(parsed.nodes);
-      console.log('Graph built - nodes:', nodes.length, 'edges:', edges.length);
-
       setGraph(nodes, edges, parsed);
       router.push('/visualize');
     } catch (err) {
-      console.error('❌ Demo loading error:', err);
       setError(err instanceof Error ? err.message : `Failed to load ${projectName} demo`);
     } finally {
       setIsLoading(false);
@@ -135,236 +134,227 @@ export default function Home() {
     }
   };
 
+  const handleOpenProject = (projectId: string) => {
+    router.push(`/visualize?project=${projectId}`);
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!confirm('Delete this project? This cannot be undone.')) return;
+
+    setDeletingId(projectId);
+    const success = await deleteProject(projectId);
+    if (success) {
+      setSavedProjects(prev => prev.filter(p => p.id !== projectId));
+    }
+    setDeletingId(null);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-slate-900">dbt-flow</h1>
-          <p className="text-sm text-slate-600">Interactive dbt Lineage Visualization</p>
+      <header className="border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <h1 className="text-xl font-semibold text-slate-900">dbt-flow</h1>
+          <p className="text-sm text-slate-500">Interactive dbt lineage visualization</p>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              Visualize Your dbt Project
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        {/* Saved Projects Section */}
+        {savedProjects.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+              Saved Projects
             </h2>
-            <p className="text-lg text-slate-600">
-              Parse and explore dbt project lineage as an interactive DAG. Enter a dbt docs URL or
-              upload your manifest.json file.
-            </p>
-          </div>
-
-          {/* Load Your Project */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">
-              Load Your Project
-            </h3>
-            <p className="text-sm text-slate-600 text-center mb-6">
-              Choose how to import your manifest.json
-            </p>
-
-            <div className="space-y-4">
-              {/* URL Input */}
-              <form onSubmit={handleUrlSubmit} className="space-y-3">
-                <div>
-                  <label htmlFor="url" className="block text-sm font-medium text-slate-700 mb-2">
-                    From dbt Docs URL
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="url"
-                      type="url"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      placeholder="https://example.netlify.app"
-                      className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={isLoading}
-                      required
-                    />
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors whitespace-nowrap"
-                    >
-                      {isLoading ? 'Loading...' : 'Fetch'}
-                    </button>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    We'll automatically fetch manifest.json from your dbt docs site
-                  </p>
-                </div>
-              </form>
-
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-white text-slate-500">OR</span>
-                </div>
-              </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Upload File
-                </label>
-                <label className="inline-block cursor-pointer w-full">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    disabled={isLoading}
-                    className="hidden"
-                  />
-                  <span className="block bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors text-center">
-                    Choose manifest.json file
-                  </span>
-                </label>
-              </div>
-
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-white text-slate-500">OR</span>
-                </div>
-              </div>
-
-              {/* Paste JSON */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Paste manifest.json Content
-                </label>
-                <button
-                  onClick={() => setShowJsonInput(!showJsonInput)}
-                  disabled={isLoading}
-                  className="w-full bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold py-3 px-6 rounded-lg border-2 border-dashed border-slate-300 transition-colors"
+            <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
+              {savedProjects.map((project) => (
+                <div
+                  key={project.id}
+                  className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
                 >
-                  {showJsonInput ? 'Hide JSON Input' : 'Show JSON Input'}
-                </button>
-
-                {showJsonInput && (
-                  <div className="mt-3 space-y-3">
-                    <textarea
-                      value={jsonText}
-                      onChange={(e) => setJsonText(e.target.value)}
-                      placeholder='Paste your manifest.json content here...'
-                      disabled={isLoading}
-                      className="w-full h-48 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-xs resize-y"
-                    />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-900 truncate">{project.name}</p>
+                    <p className="text-sm text-slate-500">
+                      {project.sourceProjectName} · {project.nodeCount} nodes · {project.plannedNodeCount} planned · Updated {formatDate(project.updatedAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
                     <button
-                      onClick={handleJsonPaste}
-                      disabled={isLoading || !jsonText.trim()}
-                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                      onClick={() => handleOpenProject(project.id)}
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
                     >
-                      {isLoading ? 'Parsing...' : 'Parse & Visualize'}
+                      Open
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(project.id)}
+                      disabled={deletingId === project.id}
+                      className="px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                    >
+                      {deletingId === project.id ? '...' : 'Delete'}
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          </div>
+          </section>
+        )}
 
-          {/* Demo Options */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">
-              Try Sample Projects
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Jaffle Shop Demo */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-lg p-6 border border-green-100">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🥪</div>
-                  <p className="text-sm font-semibold text-slate-700 mb-2">
-                    Jaffle Shop
-                  </p>
-                  <p className="text-xs text-slate-600 mb-4">
-                    Classic dbt tutorial project with staging & marts
-                  </p>
-                  <button
-                    onClick={() => handleDemoClick('manifest_jaffle_active_v0_0_1.json', 'Jaffle Shop')}
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-green-400 disabled:to-emerald-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
-                    {isLoading ? 'Loading...' : 'View Project'}
-                  </button>
-                </div>
+        {/* Start New Section */}
+        <section className="mb-10">
+          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+            Start New
+          </h2>
+          <div className="border border-slate-200 rounded-lg p-5">
+            {/* URL Input */}
+            <form onSubmit={handleUrlSubmit} className="mb-5">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                From dbt Docs URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.netlify.app"
+                  className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  disabled={isLoading}
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:bg-slate-400 transition-colors"
+                >
+                  {isLoading ? 'Loading...' : 'Fetch'}
+                </button>
               </div>
-
-              {/* Data Warehouse Demo */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 border border-blue-100">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🏢</div>
-                  <p className="text-sm font-semibold text-slate-700 mb-2">
-                    Data Warehouse
-                  </p>
-                  <p className="text-xs text-slate-600 mb-4">
-                    Production data warehouse with custom layers
-                  </p>
-                  <button
-                    onClick={() => handleDemoClick('test.json', 'Data Warehouse')}
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-400 disabled:to-indigo-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
-                    {isLoading ? 'Loading...' : 'View Project'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Lakehouse Demo */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border border-purple-100">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🏠</div>
-                  <p className="text-sm font-semibold text-slate-700 mb-2">
-                    Lakehouse
-                  </p>
-                  <p className="text-xs text-slate-600 mb-4">
-                    Modern lakehouse architecture with multi-layer design
-                  </p>
-                  <button
-                    onClick={() => handleDemoClick('manifest_salurbal_api_v1_2_2.json', 'Lakehouse')}
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
-                    {isLoading ? 'Loading...' : 'View Project'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">
-                <span className="font-semibold">Error:</span> {error}
+              <p className="mt-1.5 text-xs text-slate-500">
+                We'll fetch manifest.json from your dbt docs site
               </p>
-            </div>
-          )}
+            </form>
 
-          {/* Loading Spinner */}
-          {isLoading && (
-            <div className="mt-6 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            {/* Divider */}
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-2 bg-white text-xs text-slate-400">or</span>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* File and JSON options */}
+            <div className="flex gap-3">
+              <label className="flex-1 cursor-pointer">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
+                  className="hidden"
+                />
+                <span className="block px-4 py-2.5 text-sm font-medium text-slate-700 text-center border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">
+                  Upload manifest.json
+                </span>
+              </label>
+              <button
+                onClick={() => setShowJsonInput(!showJsonInput)}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+              >
+                {showJsonInput ? 'Hide JSON input' : 'Paste JSON'}
+              </button>
+            </div>
+
+            {/* JSON Input Area */}
+            {showJsonInput && (
+              <div className="mt-4">
+                <textarea
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                  placeholder="Paste your manifest.json content here..."
+                  disabled={isLoading}
+                  className="w-full h-40 px-3 py-2 text-sm font-mono border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-y"
+                />
+                <button
+                  onClick={handleJsonPaste}
+                  disabled={isLoading || !jsonText.trim()}
+                  className="mt-2 w-full px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:bg-slate-400 transition-colors"
+                >
+                  {isLoading ? 'Parsing...' : 'Parse & Visualize'}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Sample Projects Section */}
+        <section>
+          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+            Sample Projects
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              {
+                name: 'Jaffle Shop',
+                description: 'Classic dbt tutorial with staging & marts',
+                manifest: 'manifest_jaffle_active_v0_0_1.json',
+              },
+              {
+                name: 'Data Warehouse',
+                description: 'Production warehouse with custom layers',
+                manifest: 'test.json',
+              },
+              {
+                name: 'Lakehouse',
+                description: 'Modern multi-layer architecture',
+                manifest: 'manifest_salurbal_api_v1_2_2.json',
+              },
+            ].map((sample) => (
+              <div
+                key={sample.name}
+                className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
+              >
+                <p className="font-medium text-slate-900 mb-1">{sample.name}</p>
+                <p className="text-sm text-slate-500 mb-3">{sample.description}</p>
+                <button
+                  onClick={() => handleDemoClick(sample.manifest, sample.name)}
+                  disabled={isLoading}
+                  className="w-full px-3 py-1.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                >
+                  Open
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Loading Spinner */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-white/80 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-900 border-t-transparent" />
+          </div>
+        )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white/80 backdrop-blur-sm mt-16">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-slate-600">
-          <p>
-            Built for visualizing dbt projects • No data leaves your browser • Open source on GitHub
+      <footer className="border-t border-slate-200 mt-16">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <p className="text-sm text-slate-500 text-center">
+            No data leaves your browser · Open source
           </p>
         </div>
       </footer>

@@ -49,6 +49,11 @@ export type GraphStore = {
   projectName: string;
   generatedAt: string;
 
+  // Persistence state
+  currentProjectId: string | null;
+  savedProjectName: string;
+  hasUnsavedChanges: boolean;
+
   // UI state
   searchQuery: string;
   selectedNode: GraphNode | null;
@@ -88,6 +93,27 @@ export type GraphStore = {
     tags?: string[];
     sql?: string;
   }) => void;
+
+  // Persistence actions
+  setCurrentProjectId: (id: string | null) => void;
+  setSavedProjectName: (name: string) => void;
+  markSaved: () => void;
+  markUnsaved: () => void;
+  loadSavedProject: (
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    projectId: string,
+    projectName: string,
+    sourceProjectName: string,
+    generatedAt: string,
+    filters: {
+      resourceTypeFilters: Set<string>;
+      tagFilters: Set<string>;
+      tagFilterMode: 'AND' | 'OR';
+      inferredTagFilters: Set<string>;
+      inferredTagFilterMode: 'AND' | 'OR';
+    }
+  ) => void;
 };
 
 export const useGraphStore = create<GraphStore>((set, get) => ({
@@ -96,6 +122,9 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   edges: [],
   projectName: '',
   generatedAt: '',
+  currentProjectId: null,
+  savedProjectName: '',
+  hasUnsavedChanges: false,
   searchQuery: '',
   selectedNode: null,
   resourceTypeFilters: new Set(['model', 'seed']), // Default: show models and seeds
@@ -403,6 +432,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       nodes: [...state.nodes, newNode],
       edges: [...state.edges, newEdge],
       editingNodeId: newNodeId, // Immediately enter edit mode
+      hasUnsavedChanges: true,
     }));
 
     return newNodeId;
@@ -434,5 +464,35 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
             }
           : node
       ),
+      hasUnsavedChanges: true,
     })),
+
+  // Persistence actions
+  setCurrentProjectId: (id) =>
+    set({ currentProjectId: id }),
+
+  setSavedProjectName: (name) =>
+    set({ savedProjectName: name }),
+
+  markSaved: () =>
+    set({ hasUnsavedChanges: false }),
+
+  markUnsaved: () =>
+    set({ hasUnsavedChanges: true }),
+
+  loadSavedProject: (nodes, edges, projectId, projectName, sourceProjectName, generatedAt, filters) =>
+    set({
+      nodes,
+      edges,
+      currentProjectId: projectId,
+      savedProjectName: projectName,
+      projectName: sourceProjectName,
+      generatedAt,
+      hasUnsavedChanges: false,
+      resourceTypeFilters: filters.resourceTypeFilters,
+      tagFilters: filters.tagFilters,
+      tagFilterMode: filters.tagFilterMode,
+      inferredTagFilters: filters.inferredTagFilters,
+      inferredTagFilterMode: filters.inferredTagFilterMode,
+    }),
 }));
