@@ -15,6 +15,31 @@ export interface ExportedNode {
   tags: string[];
 }
 
+export interface PlannedNodeExport {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  tags: string[];
+  pseudoCode: string;
+  dependsOn: string[];
+}
+
+export interface UpstreamContextExport {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  inferredLayer: string | null;
+}
+
+export interface WorkPlanExport {
+  projectName: string;
+  generatedAt: string;
+  plannedNodes: PlannedNodeExport[];
+  upstreamContext: UpstreamContextExport[];
+}
+
 export type GraphStore = {
   // Graph data
   nodes: GraphNode[];
@@ -49,6 +74,8 @@ export type GraphStore = {
   clearGraph: () => void;
   exportNodesData: (nodesToExport?: GraphNode[]) => ExportedNode[];
   getFilteredNodes: () => GraphNode[];
+  exportWorkPlan: () => WorkPlanExport;
+  exportWorkPlanMarkdown: () => string;
 
   // Node editing actions
   setEditingNodeId: (nodeId: string | null) => void;
@@ -59,6 +86,7 @@ export type GraphStore = {
     description?: string;
     type?: string;
     tags?: string[];
+    sql?: string;
   }) => void;
 };
 
@@ -210,6 +238,127 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     return filtered.nodes;
   },
 
+  exportWorkPlan: () => {
+    const state = get();
+    const { nodes, edges, projectName } = state;
+
+    // Get planned nodes (user-created)
+    const plannedNodes = nodes.filter((n) => n.data.isUserCreated);
+
+    // Get upstream dependencies for planned nodes
+    const plannedNodeIds = new Set(plannedNodes.map((n) => n.id));
+    const upstreamIds = new Set<string>();
+
+    edges.forEach((edge) => {
+      if (plannedNodeIds.has(edge.target) && !plannedNodeIds.has(edge.source)) {
+        upstreamIds.add(edge.source);
+      }
+    });
+
+    const upstreamNodes = nodes.filter((n) => upstreamIds.has(n.id));
+
+    // Build planned nodes export
+    const plannedNodesExport: PlannedNodeExport[] = plannedNodes.map((node) => {
+      const dependsOn = edges
+        .filter((e) => e.target === node.id)
+        .map((e) => e.source);
+
+      return {
+        id: node.id,
+        name: node.data.label,
+        type: node.data.type,
+        description: node.data.description || '',
+        tags: node.data.tags || [],
+        pseudoCode: node.data.sql || '',
+        dependsOn,
+      };
+    });
+
+    // Build upstream context export
+    const upstreamContextExport: UpstreamContextExport[] = upstreamNodes.map((node) => ({
+      id: node.id,
+      name: node.data.label,
+      type: node.data.type,
+      description: node.data.description || '',
+      inferredLayer: node.data.inferredTags?.[0] || null,
+    }));
+
+    return {
+      projectName,
+      generatedAt: new Date().toISOString(),
+      plannedNodes: plannedNodesExport,
+      upstreamContext: upstreamContextExport,
+    };
+  },
+
+  exportWorkPlanMarkdown: () => {
+    const state = get();
+    const workPlan = state.exportWorkPlan();
+
+    const lines: string[] = [];
+
+    // Header
+    lines.push(`# Work Plan: ${workPlan.projectName || 'Untitled Project'}`);
+    lines.push(`Generated: ${new Date().toLocaleString()}`);
+    lines.push('');
+
+    // Summary
+    lines.push('## Summary');
+    lines.push(`- **${workPlan.plannedNodes.length}** planned model(s) to build`);
+    lines.push(`- Depends on **${workPlan.upstreamContext.length}** existing model(s)`);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+
+    // Planned Work
+    lines.push('## Planned Work');
+    lines.push('');
+
+    workPlan.plannedNodes.forEach((node, index) => {
+      lines.push(`### ${index + 1}. ${node.name}`);
+      lines.push(`**Type:** ${node.type}`);
+      if (node.tags.length > 0) {
+        lines.push(`**Tags:** ${node.tags.join(', ')}`);
+      }
+      if (node.dependsOn.length > 0) {
+        const depNames = node.dependsOn.map((id) => {
+          const upstream = workPlan.upstreamContext.find((u) => u.id === id);
+          return upstream?.name || id;
+        });
+        lines.push(`**Depends on:** ${depNames.join(', ')}`);
+      }
+      lines.push('');
+      if (node.description) {
+        lines.push('**Description:**');
+        lines.push(node.description);
+        lines.push('');
+      }
+      if (node.pseudoCode) {
+        lines.push('**Pseudo Code:**');
+        lines.push('```sql');
+        lines.push(node.pseudoCode);
+        lines.push('```');
+        lines.push('');
+      }
+      lines.push('---');
+      lines.push('');
+    });
+
+    // Upstream Dependencies
+    if (workPlan.upstreamContext.length > 0) {
+      lines.push('## Reference: Upstream Dependencies');
+      lines.push('');
+      lines.push('| Model | Type | Layer | Description |');
+      lines.push('|-------|------|-------|-------------|');
+      workPlan.upstreamContext.forEach((node) => {
+        const desc = node.description ? node.description.slice(0, 50) + (node.description.length > 50 ? '...' : '') : '-';
+        lines.push(`| ${node.name} | ${node.type} | ${node.inferredLayer || '-'} | ${desc} |`);
+      });
+    }
+
+    return lines.join('\n');
+  },
+
   // Node editing actions
   setEditingNodeId: (nodeId) =>
     set({
@@ -280,6 +429,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
                 ...(metadata.description !== undefined && { description: metadata.description }),
                 ...(metadata.type !== undefined && { type: metadata.type }),
                 ...(metadata.tags !== undefined && { tags: metadata.tags }),
+                ...(metadata.sql !== undefined && { sql: metadata.sql }),
               },
             }
           : node
