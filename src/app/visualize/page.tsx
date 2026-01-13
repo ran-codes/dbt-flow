@@ -43,6 +43,7 @@ function VisualizeContent() {
     isBlankProject,
     setCurrentProjectId,
     setSavedProjectName,
+    setIsBlankProject,
     markSaved,
     loadSavedProject,
     startBlankProject,
@@ -332,6 +333,7 @@ function VisualizeContent() {
     if (success) {
       setCurrentProjectId(id);
       setSavedProjectName(name);
+      setIsBlankProject(false); // No longer a blank project after saving
       markSaved();
       setSaveStatus('saved');
 

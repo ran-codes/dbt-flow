@@ -95,6 +95,15 @@ function LineageGraphInner() {
     }
   }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView, focusedNodeId]);
 
+  // Reset local state when starting a new blank project
+  useEffect(() => {
+    if (nodes.length === 0 && isBlankProject) {
+      setFilteredNodes([]);
+      setFilteredEdges([]);
+      hasAutoRelayoutRef.current = false;
+    }
+  }, [nodes.length, isBlankProject]);
+
   // Relayout filtered nodes to position them closer together and fit view
   const handleRelayout = useCallback(() => {
     if (filteredNodes.length === 0) return;
@@ -505,6 +514,19 @@ function LineageGraphInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onPaneClick={onPaneClick}
+        onPaneContextMenu={(event) => {
+          event.preventDefault();
+          const bounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+          if (bounds) {
+            const x = event.clientX - bounds.left;
+            const y = event.clientY - bounds.top;
+            setCanvasContextMenu({
+              x: event.clientX,
+              y: event.clientY,
+              flowPosition: { x: x - 100, y: y - 50 },
+            });
+          }
+        }}
         fitView
         fitViewOptions={{
           padding: 0.2,
@@ -614,6 +636,25 @@ function LineageGraphInner() {
         </div>
       )}
 
+      {/* Canvas Context Menu (for adding standalone nodes) */}
+      {canvasContextMenu && (
+        <div
+          className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50"
+          style={{ left: canvasContextMenu.x, top: canvasContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleAddStandaloneNode(canvasContextMenu.flowPosition)}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors text-slate-700 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Node
+          </button>
+        </div>
+      )}
+
       {/* Stats overlay with relayout button */}
       <div className="absolute bottom-16 left-4 bg-white rounded-lg shadow-lg px-4 py-2">
         <div className="flex items-center gap-4 text-sm">
@@ -626,6 +667,16 @@ function LineageGraphInner() {
           <span className="text-gray-600">
             Zoom: <span className="font-semibold text-gray-900">{zoomLevel}%</span>
           </span>
+          <button
+            onClick={() => handleAddStandaloneNode({ x: 250, y: 150 })}
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1"
+            title="Add a new standalone node"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Node
+          </button>
           <button
             onClick={handleRelayout}
             className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"

@@ -99,6 +99,7 @@ export type GraphStore = {
   // Persistence actions
   setCurrentProjectId: (id: string | null) => void;
   setSavedProjectName: (name: string) => void;
+  setIsBlankProject: (isBlank: boolean) => void;
   markSaved: () => void;
   markUnsaved: () => void;
   startBlankProject: () => void;
@@ -503,6 +504,9 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
 
   setSavedProjectName: (name) =>
     set({ savedProjectName: name }),
+
+  setIsBlankProject: (isBlank) =>
+    set({ isBlankProject: isBlank }),
 
   markSaved: () =>
     set({ hasUnsavedChanges: false }),
