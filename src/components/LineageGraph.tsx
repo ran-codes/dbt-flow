@@ -48,6 +48,8 @@ function LineageGraphInner() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
+  // Cache ALL node positions so they survive filtering
+  const nodePositionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const { fitView, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +71,7 @@ function LineageGraphInner() {
       setCanvasContextMenu(null);
       setDeleteError(null);
       hasAutoRelayoutRef.current = false;
+      nodePositionCacheRef.current.clear();
     }
     prevInstanceIdRef.current = projectInstanceId;
   }, [projectInstanceId]);
@@ -86,6 +89,11 @@ function LineageGraphInner() {
       setFilteredNodes(layouted.nodes);
       setFilteredEdges(filteredE);
 
+      // Cache initial positions
+      layouted.nodes.forEach((node: Node) => {
+        nodePositionCacheRef.current.set(node.id, { x: node.position.x, y: node.position.y });
+      });
+
       // Fit view on initial load (max 100% zoom)
       setTimeout(() => {
         fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
@@ -97,12 +105,22 @@ function LineageGraphInner() {
         const prevNodeMap = new Map(prevNodes.map(n => [n.id, n]));
         const filteredNodeIds = new Set(filtered.map(n => n.id));
 
-        // Start with filtered nodes, preserving positions of existing ones
+        // Update cache with current positions before changing
+        prevNodes.forEach(node => {
+          nodePositionCacheRef.current.set(node.id, { x: node.position.x, y: node.position.y });
+        });
+
+        // Start with filtered nodes, preserving positions from cache or current view
         const result = filtered.map(node => {
           const existingNode = prevNodeMap.get(node.id);
           if (existingNode) {
             // Keep existing position and style, update data
             return { ...existingNode, data: node.data };
+          }
+          // Node returning from filter - try to restore cached position
+          const cachedPosition = nodePositionCacheRef.current.get(node.id);
+          if (cachedPosition) {
+            return { ...node, position: cachedPosition };
           }
           // New node from store - use its position
           return node;
@@ -478,7 +496,16 @@ function LineageGraphInner() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setFilteredNodes((nds) => applyNodeChanges(changes, nds));
+      setFilteredNodes((nds) => {
+        const updated = applyNodeChanges(changes, nds);
+        // Update position cache for any position changes
+        changes.forEach((change) => {
+          if (change.type === 'position' && change.position) {
+            nodePositionCacheRef.current.set(change.id, { x: change.position.x, y: change.position.y });
+          }
+        });
+        return updated;
+      });
     },
     []
   );
