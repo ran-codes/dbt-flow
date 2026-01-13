@@ -61,6 +61,7 @@ export default function VisualizePage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const projectLoadedRef = useRef(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -120,6 +121,85 @@ export default function VisualizePage() {
     }
   }, [saveStatus]);
 
+  // Auto-save with 2s debounce (only for already-saved projects)
+  useEffect(() => {
+    // Clear any existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
+    // Only auto-save if project was already saved and has unsaved changes
+    if (hasUnsavedChanges && currentProjectId && savedProjectName && !isSaving) {
+      autoSaveTimerRef.current = setTimeout(() => {
+        doAutoSave();
+      }, 2000);
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, currentProjectId, savedProjectName, nodes, edges, isSaving]);
+
+  // Save before unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (hasUnsavedChanges && currentProjectId && savedProjectName) {
+        // Synchronous save attempt - may not complete but worth trying
+        const project: SavedProject = {
+          metadata: createMetadata(currentProjectId, savedProjectName, projectName, nodes, false),
+          nodes,
+          edges,
+          filters: serializeFilters(
+            resourceTypeFilters,
+            tagFilters,
+            tagFilterMode,
+            inferredTagFilters,
+            inferredTagFilterMode
+          ),
+          manifestInfo: { projectName, generatedAt },
+        };
+        // Use navigator.sendBeacon for more reliable unload saves
+        const blob = new Blob([JSON.stringify({ type: 'save', project })], { type: 'application/json' });
+        // localForage doesn't support sendBeacon, so we just try a regular save
+        saveProject(project);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, currentProjectId, savedProjectName, nodes, edges, projectName, generatedAt, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode]);
+
+  const doAutoSave = async () => {
+    if (!currentProjectId || !savedProjectName || isSaving) return;
+
+    setSaveStatus('saving');
+
+    const project: SavedProject = {
+      metadata: createMetadata(currentProjectId, savedProjectName, projectName, nodes, false),
+      nodes,
+      edges,
+      filters: serializeFilters(
+        resourceTypeFilters,
+        tagFilters,
+        tagFilterMode,
+        inferredTagFilters,
+        inferredTagFilterMode
+      ),
+      manifestInfo: { projectName, generatedAt },
+    };
+
+    const success = await saveProject(project);
+    if (success) {
+      markSaved();
+      setSaveStatus('saved');
+    } else {
+      setSaveStatus('idle');
+    }
+  };
+
   const handleExportJSON = () => {
     const workPlan = exportWorkPlan();
     setExportContent(JSON.stringify(workPlan, null, 2));
@@ -133,6 +213,39 @@ export default function VisualizePage() {
     setExportContent(markdown);
     setExportFormat('markdown');
     setIsExportModalOpen(true);
+    setIsDropdownOpen(false);
+  };
+
+  const handleExportProject = () => {
+    const project: SavedProject = {
+      metadata: createMetadata(
+        currentProjectId || generateProjectId(),
+        savedProjectName || `${projectName} Planning`,
+        projectName,
+        nodes,
+        !currentProjectId
+      ),
+      nodes,
+      edges,
+      filters: serializeFilters(
+        resourceTypeFilters,
+        tagFilters,
+        tagFilterMode,
+        inferredTagFilters,
+        inferredTagFilterMode
+      ),
+      manifestInfo: { projectName, generatedAt },
+    };
+
+    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${savedProjectName || projectName}-project.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     setIsDropdownOpen(false);
   };
 
@@ -268,19 +381,29 @@ export default function VisualizePage() {
 
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
+                <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Work Plan</div>
                 <button
                   onClick={handleExportMarkdown}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
                 >
                   <span className="text-xs font-medium text-slate-500 w-8">MD</span>
-                  <span className="text-slate-700">Issue</span>
+                  <span className="text-slate-700">Markdown</span>
                 </button>
                 <button
                   onClick={handleExportJSON}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
                 >
                   <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                  <span className="text-slate-700">Repository</span>
+                  <span className="text-slate-700">JSON</span>
+                </button>
+                <div className="border-t border-slate-200 my-1" />
+                <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Project</div>
+                <button
+                  onClick={handleExportProject}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
+                >
+                  <span className="text-xs font-medium text-slate-500 w-8">FILE</span>
+                  <span className="text-slate-700">Download as JSON</span>
                 </button>
               </div>
             )}

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchManifest, parseManifestFile, type DbtManifest } from '@/lib/manifestParser';
 import { buildGraph } from '@/lib/graphBuilder';
 import { useGraphStore } from '@/store/useGraphStore';
-import { listProjects, deleteProject } from '@/lib/storageService';
-import type { ProjectMetadata } from '@/lib/persistence';
+import { listProjects, deleteProject, saveProject, exportDatabase, importDatabase, type DatabaseBackup } from '@/lib/storageService';
+import { generateProjectId, type ProjectMetadata, type SavedProject } from '@/lib/persistence';
 
 export default function Home() {
   const router = useRouter();
@@ -18,6 +18,8 @@ export default function Home() {
   const [showJsonInput, setShowJsonInput] = useState(false);
   const [savedProjects, setSavedProjects] = useState<ProjectMetadata[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved projects on mount
   useEffect(() => {
@@ -154,6 +156,131 @@ export default function Home() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const handleBackupDatabase = async () => {
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const backup = await exportDatabase();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dbt-flow-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create backup');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestoreDatabase = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const projectCount = savedProjects.length;
+    const confirmed = confirm(
+      `This will replace all ${projectCount} existing project${projectCount !== 1 ? 's' : ''} with the backup contents.\n\nThis cannot be undone. Continue?`
+    );
+
+    if (!confirmed) {
+      if (restoreInputRef.current) {
+        restoreInputRef.current.value = '';
+      }
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text) as DatabaseBackup;
+
+      // Validate it's a database backup (not a single project)
+      if (!backup.projects || !Array.isArray(backup.projects)) {
+        throw new Error('Invalid backup file. This appears to be a single project file, not a database backup.');
+      }
+
+      const success = await importDatabase(backup);
+      if (success) {
+        // Refresh the list
+        const projects = await listProjects();
+        setSavedProjects(projects);
+      } else {
+        throw new Error('Failed to restore backup');
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setError('Invalid JSON file. Please check the file format.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to restore backup');
+      }
+    } finally {
+      setIsLoading(false);
+      if (restoreInputRef.current) {
+        restoreInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleImportProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text) as SavedProject;
+
+      // Validate structure
+      if (!imported.nodes || !imported.edges || !imported.metadata) {
+        throw new Error('Invalid project file format');
+      }
+
+      // Generate new ID to avoid conflicts
+      const newId = generateProjectId();
+      const project: SavedProject = {
+        ...imported,
+        metadata: {
+          ...imported.metadata,
+          id: newId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      // Save to storage
+      const success = await saveProject(project);
+      if (success) {
+        // Refresh the list and navigate to the project
+        const projects = await listProjects();
+        setSavedProjects(projects);
+        router.push(`/visualize?project=${newId}`);
+      } else {
+        throw new Error('Failed to save imported project');
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setError('Invalid JSON file. Please check the file format.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to import project');
+      }
+    } finally {
+      setIsLoading(false);
+      // Reset input
+      if (importInputRef.current) {
+        importInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -173,12 +300,37 @@ export default function Home() {
           </div>
         )}
 
+        {/* Hidden file inputs */}
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportProject}
+          className="hidden"
+        />
+        <input
+          ref={restoreInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleRestoreDatabase}
+          className="hidden"
+        />
+
         {/* Saved Projects Section */}
-        {savedProjects.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">
               Saved Projects
             </h2>
+            <button
+              onClick={() => importInputRef.current?.click()}
+              disabled={isLoading}
+              className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              Import project
+            </button>
+          </div>
+          {savedProjects.length > 0 ? (
             <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
               {savedProjects.map((project) => (
                 <div
@@ -209,8 +361,31 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <div className="border border-slate-200 border-dashed rounded-lg px-4 py-6 text-center">
+              <p className="text-sm text-slate-500">No saved projects yet</p>
+              <p className="text-xs text-slate-400 mt-1">Projects you save will appear here</p>
+            </div>
+          )}
+          {/* Database backup/restore */}
+          <div className="mt-3 flex items-center justify-end gap-3 text-xs">
+            <button
+              onClick={handleBackupDatabase}
+              disabled={isLoading || savedProjects.length === 0}
+              className="text-slate-400 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Backup DB
+            </button>
+            <span className="text-slate-300">·</span>
+            <button
+              onClick={() => restoreInputRef.current?.click()}
+              disabled={isLoading}
+              className="text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
+            >
+              Restore DB
+            </button>
+          </div>
+        </section>
 
         {/* Start New Section */}
         <section className="mb-10">

@@ -121,3 +121,66 @@ export async function clearAllData(): Promise<void> {
   await projectStore.clear();
   await indexStore.clear();
 }
+
+/**
+ * Database backup format
+ */
+export interface DatabaseBackup {
+  version: number;
+  exportedAt: string;
+  projects: SavedProject[];
+}
+
+/**
+ * Export all projects as a backup
+ */
+export async function exportDatabase(): Promise<DatabaseBackup> {
+  const index = await listProjects();
+  const projects: SavedProject[] = [];
+
+  for (const meta of index) {
+    const project = await loadProject(meta.id);
+    if (project) {
+      projects.push(project);
+    }
+  }
+
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects,
+  };
+}
+
+/**
+ * Import a database backup, replacing all existing data
+ */
+export async function importDatabase(backup: DatabaseBackup): Promise<boolean> {
+  try {
+    // Validate backup structure
+    if (!backup.projects || !Array.isArray(backup.projects)) {
+      throw new Error('Invalid backup format');
+    }
+
+    // Clear existing data
+    await projectStore.clear();
+    await indexStore.clear();
+
+    // Import all projects
+    const index: ProjectMetadata[] = [];
+    for (const project of backup.projects) {
+      if (project.metadata && project.nodes && project.edges) {
+        await projectStore.setItem(project.metadata.id, project);
+        index.push(project.metadata);
+      }
+    }
+
+    // Save the index
+    await indexStore.setItem(INDEX_KEY, index);
+
+    return true;
+  } catch (error) {
+    console.error('Failed to import database:', error);
+    return false;
+  }
+}
