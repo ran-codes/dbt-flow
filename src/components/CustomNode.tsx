@@ -1,55 +1,10 @@
-import { memo, useState, useEffect, useRef } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
 import type { GraphNode } from '@/lib/graphBuilder';
 import { getNodeColor } from '@/lib/graphBuilder';
-import { useGraphStore } from '@/store/useGraphStore';
 
-function CustomNode({ data, selected, id }: NodeProps<GraphNode['data']>) {
+function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const [localLabel, setLocalLabel] = useState(data.label);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const { editingNodeId, setEditingNodeId, updateNodeLabel } = useGraphStore();
-  const isEditing = editingNodeId === id;
-
-  // Focus input when entering edit mode
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  // Sync local label with data
-  useEffect(() => {
-    setLocalLabel(data.label);
-  }, [data.label]);
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (data.isUserCreated) {
-      setEditingNodeId(id);
-    }
-  };
-
-  const handleBlur = () => {
-    if (localLabel.trim()) {
-      updateNodeLabel(id, localLabel.trim());
-    } else {
-      setLocalLabel(data.label); // Revert if empty
-    }
-    setEditingNodeId(null);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleBlur();
-    }
-    if (e.key === 'Escape') {
-      setLocalLabel(data.label);
-      setEditingNodeId(null);
-    }
-  };
 
   return (
     <div className="relative">
@@ -75,24 +30,8 @@ function CustomNode({ data, selected, id }: NodeProps<GraphNode['data']>) {
         onMouseLeave={() => setShowTooltip(false)}
       >
         <div className="flex flex-col gap-1.5">
-          <div
-            className="text-white font-semibold text-sm truncate"
-            onDoubleClick={handleDoubleClick}
-          >
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={localLabel}
-                onChange={(e) => setLocalLabel(e.target.value)}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                className="bg-transparent border-none outline-none text-white font-semibold text-sm w-full"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              data.label
-            )}
+          <div className="text-white font-semibold text-sm truncate">
+            {data.label}
           </div>
 
           {/* Tooltip for full name */}

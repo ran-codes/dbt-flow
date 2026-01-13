@@ -54,6 +54,12 @@ export type GraphStore = {
   setEditingNodeId: (nodeId: string | null) => void;
   addDownstreamNode: (parentNodeId: string, position: { x: number; y: number }) => string;
   updateNodeLabel: (nodeId: string, newLabel: string) => void;
+  updateNodeMetadata: (nodeId: string, metadata: {
+    label?: string;
+    description?: string;
+    type?: string;
+    tags?: string[];
+  }) => void;
 };
 
 export const useGraphStore = create<GraphStore>((set, get) => ({
@@ -258,6 +264,24 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       nodes: state.nodes.map((node) =>
         node.id === nodeId
           ? { ...node, data: { ...node.data, label: newLabel } }
+          : node
+      ),
+    })),
+
+  updateNodeMetadata: (nodeId, metadata) =>
+    set((state) => ({
+      nodes: state.nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                ...(metadata.label !== undefined && { label: metadata.label }),
+                ...(metadata.description !== undefined && { description: metadata.description }),
+                ...(metadata.type !== undefined && { type: metadata.type }),
+                ...(metadata.tags !== undefined && { tags: metadata.tags }),
+              },
+            }
           : node
       ),
     })),

@@ -21,13 +21,15 @@ import { useGraphStore } from '@/store/useGraphStore';
 import { filterNodes, getNodeColor, getLayoutedElements, getAncestors, getDescendants } from '@/lib/graphBuilder';
 import FilterBar from './FilterBar';
 import CustomNode from './CustomNode';
+import NodeDetailsPanel from './NodeDetailsPanel';
+import type { GraphNode } from '@/lib/graphBuilder';
 
 const nodeTypes = {
   default: CustomNode,
 };
 
 function LineageGraphInner() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, updateNodeMetadata } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
@@ -58,8 +60,37 @@ function LineageGraphInner() {
         hasAutoRelayoutRef.current = true;
       }, 100);
     } else {
-      setFilteredNodes(filtered);
-      setFilteredEdges(filteredE);
+      // Preserve existing node positions, only update data and add new nodes
+      setFilteredNodes((prevNodes) => {
+        const prevNodeMap = new Map(prevNodes.map(n => [n.id, n]));
+        const filteredNodeIds = new Set(filtered.map(n => n.id));
+
+        // Start with filtered nodes, preserving positions of existing ones
+        const result = filtered.map(node => {
+          const existingNode = prevNodeMap.get(node.id);
+          if (existingNode) {
+            // Keep existing position and style, update data
+            return { ...existingNode, data: node.data };
+          }
+          // New node from store - use its position
+          return node;
+        });
+
+        // Also keep any local nodes not yet in filtered (e.g., newly added nodes)
+        prevNodes.forEach(prevNode => {
+          if (!filteredNodeIds.has(prevNode.id)) {
+            result.push(prevNode);
+          }
+        });
+
+        return result;
+      });
+      setFilteredEdges((prevEdges) => {
+        const filteredEdgeIds = new Set(filteredE.map(e => e.id));
+        // Keep any local edges not yet in filtered
+        const extraEdges = prevEdges.filter(e => !filteredEdgeIds.has(e.id));
+        return [...filteredE, ...extraEdges];
+      });
     }
   }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView, focusedNodeId]);
 
@@ -210,6 +241,25 @@ function LineageGraphInner() {
       fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
     }, 100);
   }, [nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, fitView]);
+
+  const handleUpdateNode = useCallback(
+    (nodeId: string, data: Partial<GraphNode['data']>) => {
+      updateNodeMetadata(nodeId, data);
+      // Also update local filtered nodes
+      setFilteredNodes((prev) =>
+        prev.map((n) =>
+          n.id === nodeId
+            ? { ...n, data: { ...n.data, ...data } }
+            : n
+        )
+      );
+      // Update selectedNode if it's the one being edited
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, ...data } } as any);
+      }
+    },
+    [updateNodeMetadata, selectedNode, setSelectedNode]
+  );
 
   const handleAddDownstream = useCallback(
     (parentNodeId: string) => {
@@ -389,90 +439,11 @@ function LineageGraphInner() {
 
       {/* Node details panel */}
       {selectedNode && (
-        <div className="absolute top-4 right-4 w-96 bg-white rounded-lg shadow-lg p-6 max-h-[90vh] overflow-y-auto">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">{selectedNode.data.label}</h3>
-              <span
-                className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded"
-                style={{
-                  backgroundColor: selectedNode.style?.background as string,
-                  color: 'white',
-                }}
-              >
-                {selectedNode.data.type}
-              </span>
-            </div>
-            <button
-              onClick={() => setSelectedNode(null)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
-          </div>
-
-          {selectedNode.data.description && (
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-1">Description</h4>
-              <p className="text-sm text-gray-600">{selectedNode.data.description}</p>
-            </div>
-          )}
-
-          {selectedNode.data.database && (
-            <div className="mb-2">
-              <span className="text-sm text-gray-500">Database: </span>
-              <span className="text-sm text-gray-900">{selectedNode.data.database}</span>
-            </div>
-          )}
-
-          {selectedNode.data.schema && (
-            <div className="mb-2">
-              <span className="text-sm text-gray-500">Schema: </span>
-              <span className="text-sm text-gray-900">{selectedNode.data.schema}</span>
-            </div>
-          )}
-
-          {selectedNode.data.inferredTags && selectedNode.data.inferredTags.length > 0 && (
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Inferred Layer</h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedNode.data.inferredTags.map((tag: string) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-md font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedNode.data.tags && selectedNode.data.tags.length > 0 && (
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Tags</h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedNode.data.tags.map((tag: string) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-md font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedNode.data.sql && (
-            <div className="mt-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">SQL</h4>
-              <pre className="text-xs bg-gray-50 p-3 rounded overflow-x-auto">
-                <code>{selectedNode.data.sql}</code>
-              </pre>
-            </div>
-          )}
-        </div>
+        <NodeDetailsPanel
+          node={selectedNode as GraphNode}
+          onClose={() => setSelectedNode(null)}
+          onUpdate={handleUpdateNode}
+        />
       )}
 
       {/* Context Menu */}
