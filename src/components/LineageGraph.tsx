@@ -35,7 +35,7 @@ const edgeTypes = {
 };
 
 function LineageGraphInner() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, addEdge, updateNodeMetadata, isBlankProject, deleteNode, deleteEdge, canDeleteNode } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, addEdge, updateNodeMetadata, isBlankProject, deleteNode, deleteEdge, canDeleteNode, projectInstanceId } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
@@ -51,8 +51,27 @@ function LineageGraphInner() {
   const { fitView, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Track the current project to detect project switches
-  const currentProjectRef = useRef<string>('');
+  // Track project instance to detect project switches
+  const prevInstanceIdRef = useRef<string>(projectInstanceId);
+
+  // Reset ALL local state when project instance changes (switching projects)
+  useEffect(() => {
+    if (prevInstanceIdRef.current !== projectInstanceId && prevInstanceIdRef.current !== '') {
+      // Full reset of all local state
+      setFilteredNodes([]);
+      setFilteredEdges([]);
+      setHighlightedNodes(new Set());
+      setHighlightedEdges(new Set());
+      setHiddenNodes(new Set());
+      setFocusedNodeId(null);
+      setContextMenu(null);
+      setEdgeContextMenu(null);
+      setCanvasContextMenu(null);
+      setDeleteError(null);
+      hasAutoRelayoutRef.current = false;
+    }
+    prevInstanceIdRef.current = projectInstanceId;
+  }, [projectInstanceId]);
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
@@ -61,31 +80,18 @@ function LineageGraphInner() {
 
     const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, 'OR');
 
-    // Detect if this is a completely new project (different set of node IDs)
-    const newNodeIds = new Set(filtered.map(n => n.id));
-    const isNewProject = filtered.length > 0 &&
-      (currentProjectRef.current === '' ||
-       !filtered.some(n => currentProjectRef.current.includes(n.id.split('.')[1] || '')));
-
-    // Update project reference using first node's project identifier
-    if (filtered.length > 0) {
-      const firstNodeProject = filtered[0].id.split('.')[1] || filtered[0].id;
-      currentProjectRef.current = firstNodeProject;
-    }
-
-    // Apply layout and set nodes - do full reset for new projects
-    if (filtered.length > 0 && (!hasAutoRelayoutRef.current || isNewProject)) {
+    // Apply layout and set nodes on initial load or when nodes are empty
+    if (filtered.length > 0 && !hasAutoRelayoutRef.current) {
       const layouted = getLayoutedElements(filtered as any[], filteredE as any[]);
       setFilteredNodes(layouted.nodes);
       setFilteredEdges(filteredE);
-      setHiddenNodes(new Set());
 
       // Fit view on initial load (max 100% zoom)
       setTimeout(() => {
         fitView({ padding: 0.2, duration: 300, maxZoom: 1 });
         hasAutoRelayoutRef.current = true;
       }, 100);
-    } else {
+    } else if (hasAutoRelayoutRef.current) {
       // Preserve existing node positions, only update data and add new nodes
       setFilteredNodes((prevNodes) => {
         const prevNodeMap = new Map(prevNodes.map(n => [n.id, n]));
@@ -102,10 +108,13 @@ function LineageGraphInner() {
           return node;
         });
 
-        // Only keep user-created nodes (not from previous projects)
+        // Only keep user-created nodes that are still in the current project
         prevNodes.forEach(prevNode => {
           if (!filteredNodeIds.has(prevNode.id) && prevNode.data?.isUserCreated) {
-            result.push(prevNode);
+            // Check if this node belongs to current project (user-created nodes have no project prefix)
+            if (prevNode.id.startsWith('user-node-')) {
+              result.push(prevNode);
+            }
           }
         });
 
@@ -113,13 +122,11 @@ function LineageGraphInner() {
       });
       setFilteredEdges((prevEdges) => {
         const filteredEdgeIds = new Set(filteredE.map(e => e.id));
-        // Only keep edges connected to user-created nodes
+        // Only keep edges that connect to nodes in the current graph
         const extraEdges = prevEdges.filter(e => {
           if (filteredEdgeIds.has(e.id)) return false;
-          // Check if this edge connects to a user-created node
-          const sourceNode = nodes.find(n => n.id === e.source);
-          const targetNode = nodes.find(n => n.id === e.target);
-          return sourceNode?.data?.isUserCreated || targetNode?.data?.isUserCreated;
+          // Check if this edge connects user-created nodes
+          return e.source.startsWith('user-node-') || e.target.startsWith('user-node-');
         });
         return [...filteredE, ...extraEdges];
       });

@@ -20,6 +20,19 @@ const indexStore = localforage.createInstance({
 
 const INDEX_KEY = 'project-index';
 
+// Track pending saves to prevent race conditions
+const pendingSaves = new Map<string, Promise<boolean>>();
+
+/**
+ * Wait for any pending save of a specific project to complete
+ */
+async function waitForPendingSave(id: string): Promise<void> {
+  const pending = pendingSaves.get(id);
+  if (pending) {
+    await pending;
+  }
+}
+
 /**
  * Get all project metadata for listing
  */
@@ -39,9 +52,13 @@ export async function listProjects(): Promise<ProjectMetadata[]> {
 
 /**
  * Load a full project by ID
+ * Waits for any pending saves to complete first to prevent race conditions
  */
 export async function loadProject(id: string): Promise<SavedProject | null> {
   try {
+    // Wait for any in-flight save of this project to complete
+    await waitForPendingSave(id);
+
     const project = await projectStore.getItem<SavedProject>(id);
     return project;
   } catch (error) {
@@ -52,34 +69,48 @@ export async function loadProject(id: string): Promise<SavedProject | null> {
 
 /**
  * Save or update a project
+ * Tracks the save promise to prevent race conditions with loads
  */
 export async function saveProject(project: SavedProject): Promise<boolean> {
-  try {
-    // Save the full project data
-    await projectStore.setItem(project.metadata.id, project);
+  const id = project.metadata.id;
 
-    // Update the index
-    const index = await indexStore.getItem<ProjectMetadata[]>(INDEX_KEY) || [];
-    const existingIndex = index.findIndex(p => p.id === project.metadata.id);
+  // Create the save operation
+  const saveOperation = (async () => {
+    try {
+      // Save the full project data
+      await projectStore.setItem(id, project);
 
-    if (existingIndex >= 0) {
-      // Update existing entry, preserve createdAt
-      const existing = index[existingIndex];
-      index[existingIndex] = {
-        ...project.metadata,
-        createdAt: existing.createdAt,
-      };
-    } else {
-      // Add new entry
-      index.push(project.metadata);
+      // Update the index
+      const index = await indexStore.getItem<ProjectMetadata[]>(INDEX_KEY) || [];
+      const existingIndex = index.findIndex(p => p.id === id);
+
+      if (existingIndex >= 0) {
+        // Update existing entry, preserve createdAt
+        const existing = index[existingIndex];
+        index[existingIndex] = {
+          ...project.metadata,
+          createdAt: existing.createdAt,
+        };
+      } else {
+        // Add new entry
+        index.push(project.metadata);
+      }
+
+      await indexStore.setItem(INDEX_KEY, index);
+      return true;
+    } catch (error) {
+      console.error('Failed to save project:', error);
+      return false;
+    } finally {
+      // Clean up the pending save tracker
+      pendingSaves.delete(id);
     }
+  })();
 
-    await indexStore.setItem(INDEX_KEY, index);
-    return true;
-  } catch (error) {
-    console.error('Failed to save project:', error);
-    return false;
-  }
+  // Track this save so loads can wait for it
+  pendingSaves.set(id, saveOperation);
+
+  return saveOperation;
 }
 
 /**

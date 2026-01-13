@@ -90,6 +90,9 @@ export type GraphStore = {
   projectName: string;
   generatedAt: string;
 
+  // Project instance - changes on every project load for clean resets
+  projectInstanceId: string;
+
   // Persistence state
   currentProjectId: string | null;
   savedProjectName: string;
@@ -175,6 +178,7 @@ export const useGraphStore = create<GraphStore>()(
   deletedEdges: [],
   projectName: '',
   generatedAt: '',
+  projectInstanceId: '',
   currentProjectId: null,
   savedProjectName: '',
   hasUnsavedChanges: false,
@@ -200,6 +204,8 @@ export const useGraphStore = create<GraphStore>()(
 
     // Full reset - clear all state and set new graph
     set({
+      // New instance ID triggers component resets
+      projectInstanceId: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       nodes,
       edges,
       projectName: manifest.projectName,
@@ -805,6 +811,8 @@ export const useGraphStore = create<GraphStore>()(
 
   startBlankProject: () =>
     set({
+      // New instance ID triggers component resets
+      projectInstanceId: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       nodes: [],
       edges: [],
       deletedNodes: [],
@@ -827,6 +835,8 @@ export const useGraphStore = create<GraphStore>()(
 
   loadSavedProject: (nodes, edges, projectId, projectName, sourceProjectName, generatedAt, filters) =>
     set({
+      // New instance ID triggers component resets
+      projectInstanceId: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       nodes,
       edges,
       currentProjectId: projectId,
@@ -834,6 +844,15 @@ export const useGraphStore = create<GraphStore>()(
       projectName: sourceProjectName,
       generatedAt,
       hasUnsavedChanges: false,
+      // Reset modification tracking (don't carry over from previous project)
+      deletedNodes: [],
+      deletedEdges: [],
+      // Reset UI state
+      selectedNode: null,
+      searchQuery: '',
+      editingNodeId: null,
+      isBlankProject: false,
+      // Apply saved filters
       resourceTypeFilters: filters.resourceTypeFilters,
       tagFilters: filters.tagFilters,
       tagFilterMode: filters.tagFilterMode,

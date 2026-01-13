@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useGraphStore } from '@/store/useGraphStore';
@@ -77,10 +77,13 @@ function VisualizeContent() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const projectLoadedRef = useRef(false);
-  const loadedSampleRef = useRef<string | null>(null);
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Track what's currently loaded to detect changes
+  const [loadedSource, setLoadedSource] = useState<{
+    type: 'sample' | 'project' | 'blank' | null;
+    id: string | null;
+  }>({ type: null, id: null });
 
   useEffect(() => {
     setMounted(true);
@@ -94,33 +97,40 @@ function VisualizeContent() {
     const sampleId = searchParams.get('sample');
     const isBlank = searchParams.get('blank') === 'true';
 
-    // Check if we need to load a different sample
-    const sampleChanged = sampleId && loadedSampleRef.current !== sampleId;
-    if (sampleChanged) {
-      projectLoadedRef.current = false;
-      loadedSampleRef.current = null;
+    // Determine what should be loaded based on URL params
+    let targetType: 'sample' | 'project' | 'blank' | null = null;
+    let targetId: string | null = null;
+
+    if (isBlank) {
+      targetType = 'blank';
+      targetId = null;
+    } else if (sampleId) {
+      targetType = 'sample';
+      targetId = sampleId.toLowerCase();
+    } else if (projectId) {
+      targetType = 'project';
+      targetId = projectId;
     }
 
-    if (projectLoadedRef.current) return;
+    // Skip if already loaded the same source
+    if (loadedSource.type === targetType && loadedSource.id === targetId) {
+      return;
+    }
 
-    if (isBlank && !isBlankProject) {
-      projectLoadedRef.current = true;
-      loadedSampleRef.current = null;
+    // Load the appropriate project
+    if (targetType === 'blank') {
       startBlankProject();
-      // Clean up URL
+      setLoadedSource({ type: 'blank', id: null });
       router.replace('/visualize');
-    } else if (sampleId) {
-      // Load sample project
-      const sample = SAMPLE_PROJECTS[sampleId.toLowerCase()];
+    } else if (targetType === 'sample' && targetId) {
+      const sample = SAMPLE_PROJECTS[targetId];
       if (sample) {
-        projectLoadedRef.current = true;
-        loadedSampleRef.current = sampleId;
+        setLoadedSource({ type: 'sample', id: targetId });
         const loadSample = async () => {
           try {
             const currentPath = window.location.pathname.endsWith('/')
               ? window.location.pathname.slice(0, -1)
               : window.location.pathname;
-            // Go up from /visualize to root
             const basePath = currentPath.replace('/visualize', '');
             const manifestUrl = `${window.location.origin}${basePath}/${sample.file}`;
             const response = await fetch(manifestUrl);
@@ -144,18 +154,17 @@ function VisualizeContent() {
             setGraph(graphNodes, graphEdges, parsed);
           } catch (err) {
             console.error('Failed to load sample:', err);
+            setLoadedSource({ type: null, id: null });
             router.push('/');
           }
         };
         loadSample();
       } else {
-        // Unknown sample, redirect to home
         router.push('/');
       }
-    } else if (projectId && nodes.length === 0) {
-      projectLoadedRef.current = true;
-      loadedSampleRef.current = null;
-      loadProject(projectId).then((project) => {
+    } else if (targetType === 'project' && targetId) {
+      setLoadedSource({ type: 'project', id: targetId });
+      loadProject(targetId).then((project) => {
         if (project) {
           const filters = deserializeFilters(project.filters);
           loadSavedProject(
@@ -168,12 +177,12 @@ function VisualizeContent() {
             filters
           );
         } else {
-          // Project not found, redirect to home
+          setLoadedSource({ type: null, id: null });
           router.push('/');
         }
       });
     }
-  }, [mounted, searchParams, nodes.length, loadSavedProject, router, isBlankProject, startBlankProject, setGraph]);
+  }, [mounted, searchParams, loadedSource, loadSavedProject, router, startBlankProject, setGraph]);
 
   // Redirect to home if no data, no project param, no sample param, and not blank project
   useEffect(() => {
@@ -202,84 +211,6 @@ function VisualizeContent() {
     }
   }, [saveStatus]);
 
-  // Auto-save with 2s debounce (only for already-saved projects)
-  useEffect(() => {
-    // Clear any existing timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = null;
-    }
-
-    // Only auto-save if project was already saved and has unsaved changes
-    if (hasUnsavedChanges && currentProjectId && savedProjectName && !isSaving) {
-      autoSaveTimerRef.current = setTimeout(() => {
-        doAutoSave();
-      }, 2000);
-    }
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [hasUnsavedChanges, currentProjectId, savedProjectName, nodes, edges, isSaving]);
-
-  // Save before unload
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (hasUnsavedChanges && currentProjectId && savedProjectName) {
-        // Synchronous save attempt - may not complete but worth trying
-        const project: SavedProject = {
-          metadata: createMetadata(currentProjectId, savedProjectName, projectName, nodes, false),
-          nodes,
-          edges,
-          filters: serializeFilters(
-            resourceTypeFilters,
-            tagFilters,
-            tagFilterMode,
-            inferredTagFilters,
-            inferredTagFilterMode
-          ),
-          manifestInfo: { projectName, generatedAt },
-        };
-        // Use navigator.sendBeacon for more reliable unload saves
-        const blob = new Blob([JSON.stringify({ type: 'save', project })], { type: 'application/json' });
-        // localForage doesn't support sendBeacon, so we just try a regular save
-        saveProject(project);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges, currentProjectId, savedProjectName, nodes, edges, projectName, generatedAt, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, inferredTagFilterMode]);
-
-  const doAutoSave = async () => {
-    if (!currentProjectId || !savedProjectName || isSaving) return;
-
-    setSaveStatus('saving');
-
-    const project: SavedProject = {
-      metadata: createMetadata(currentProjectId, savedProjectName, projectName, nodes, false),
-      nodes,
-      edges,
-      filters: serializeFilters(
-        resourceTypeFilters,
-        tagFilters,
-        tagFilterMode,
-        inferredTagFilters,
-        inferredTagFilterMode
-      ),
-      manifestInfo: { projectName, generatedAt },
-    };
-
-    const success = await saveProject(project);
-    if (success) {
-      markSaved();
-      setSaveStatus('saved');
-    } else {
-      setSaveStatus('idle');
-    }
-  };
 
   const handleExportJSON = () => {
     const workPlan = exportWorkPlan();
@@ -360,7 +291,7 @@ function VisualizeContent() {
     setIsDropdownOpen(false);
   };
 
-  const handleSaveClick = useCallback(() => {
+  const handleSaveClick = () => {
     if (currentProjectId) {
       // Existing project - save directly
       doSave(savedProjectName);
@@ -368,7 +299,7 @@ function VisualizeContent() {
       // New project - show modal for name
       setIsSaveModalOpen(true);
     }
-  }, [currentProjectId, savedProjectName]);
+  };
 
   const handleStartEditTitle = () => {
     setEditedTitle(savedProjectName || projectName);
@@ -380,9 +311,8 @@ function VisualizeContent() {
     const newTitle = editedTitle.trim();
     if (newTitle && newTitle !== (savedProjectName || projectName)) {
       setSavedProjectName(newTitle);
-      // Mark as unsaved so it will auto-save
       if (currentProjectId) {
-        // Trigger a save with the new name
+        // Save immediately with the new name
         doSave(newTitle);
       }
     }
@@ -449,7 +379,13 @@ function VisualizeContent() {
   const plannedNodeCount = nodes.filter(n => n.data.isUserCreated).length;
 
   // Show loading while project is being loaded from URL param
-  if (!mounted || (nodes.length === 0 && (searchParams.get('project') || searchParams.get('sample')) && !isBlankProject)) {
+  const isLoading = !mounted || (
+    nodes.length === 0 &&
+    (searchParams.get('project') || searchParams.get('sample')) &&
+    !isBlankProject
+  );
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
@@ -463,13 +399,24 @@ function VisualizeContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col relative">
+      {/* Saving overlay - blocks all interactions while save is in progress */}
+      {isSaving && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-slate-300 border-t-slate-600"></div>
+            <span className="text-slate-700 font-medium">Saving project...</span>
+          </div>
+        </div>
+      )}
+
       {/* Header with search */}
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4 z-10">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.push('/')}
-            className="text-slate-600 hover:text-slate-900 font-medium text-sm"
+            onClick={() => !isSaving && router.push('/')}
+            disabled={isSaving}
+            className={`font-medium text-sm ${isSaving ? 'text-slate-400 cursor-not-allowed' : 'text-slate-600 hover:text-slate-900'}`}
           >
             ← Back
           </button>
@@ -498,11 +445,17 @@ function VisualizeContent() {
                   </svg>
                 </button>
               )}
-              {hasUnsavedChanges && (
+              {isSaving && (
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <span className="animate-spin rounded-full h-3 w-3 border border-slate-300 border-t-slate-600"></span>
+                  Saving...
+                </span>
+              )}
+              {!isSaving && hasUnsavedChanges && (
                 <span className="w-2 h-2 rounded-full bg-amber-500" title="Unsaved changes" />
               )}
-              {saveStatus === 'saved' && (
-                <span className="text-xs text-slate-500">Saved</span>
+              {!isSaving && saveStatus === 'saved' && (
+                <span className="text-xs text-green-600">✓ Saved</span>
               )}
             </div>
             <p className="text-xs text-slate-500">
@@ -526,9 +479,12 @@ function VisualizeContent() {
           <button
             onClick={handleSaveClick}
             disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            {saveStatus === 'saving' ? 'Saving...' : 'Save'}
+            {isSaving && (
+              <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-300 border-t-slate-600"></span>
+            )}
+            {isSaving ? 'Saving...' : 'Save'}
           </button>
 
           {/* Export Work Plan Dropdown */}
