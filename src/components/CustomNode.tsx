@@ -21,7 +21,11 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
         }`}
         style={{
           backgroundColor: data.isUserCreated ? '#6b7280' : getNodeColor(data.type, data.inferredTags),
-          border: data.isUserCreated ? '2px dashed #1e293b' : '2px solid #1e293b',
+          border: data.isModified
+            ? '3px solid #f59e0b'  // amber border for modified nodes
+            : data.isUserCreated
+              ? '2px dashed #1e293b'
+              : '2px solid #1e293b',
           opacity: data.isUserCreated ? 0.7 : 1,
           minWidth: '180px',
           maxWidth: '180px',
@@ -30,8 +34,17 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
         onMouseLeave={() => setShowTooltip(false)}
       >
         <div className="flex flex-col gap-1.5">
-          <div className="text-white font-semibold text-sm truncate">
-            {data.label}
+          <div className="flex items-center gap-1.5">
+            <div className="text-white font-semibold text-sm truncate flex-1">
+              {data.label}
+            </div>
+            {data.isModified && !data.isUserCreated && (
+              <div className="flex-shrink-0" title="Modified from manifest">
+                <svg className="w-3.5 h-3.5 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* Tooltip for full name */}

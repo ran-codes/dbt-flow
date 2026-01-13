@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { temporal } from 'zundo';
 import { MarkerType } from 'reactflow';
 import type { GraphNode, GraphEdge } from '@/lib/graphBuilder';
 import type { ParsedManifest } from '@/lib/manifestParser';
@@ -33,17 +34,57 @@ export interface UpstreamContextExport {
   inferredLayer: string | null;
 }
 
+// Types for tracking modifications
+export interface ModifiedNode {
+  id: string;
+  originalLabel: string;
+  newLabel: string;
+  originalDescription: string;
+  newDescription: string;
+  originalType: string;
+  newType: string;
+  originalTags: string[];
+  newTags: string[];
+  originalSql: string;
+  newSql: string;
+}
+
+export interface DeletedNode {
+  id: string;
+  label: string;
+  type: string;
+}
+
+export interface DeletedEdge {
+  id: string;
+  sourceId: string;
+  sourceLabel: string;
+  targetId: string;
+  targetLabel: string;
+}
+
+export interface ModificationsExport {
+  modifiedNodes: ModifiedNode[];
+  deletedNodes: DeletedNode[];
+  deletedEdges: DeletedEdge[];
+}
+
 export interface WorkPlanExport {
   projectName: string;
   generatedAt: string;
   plannedNodes: PlannedNodeExport[];
   upstreamContext: UpstreamContextExport[];
+  modifications: ModificationsExport;
 }
 
 export type GraphStore = {
   // Graph data
   nodes: GraphNode[];
   edges: GraphEdge[];
+
+  // Modification tracking
+  deletedNodes: DeletedNode[];
+  deletedEdges: DeletedEdge[];
 
   // Metadata
   projectName: string;
@@ -96,6 +137,9 @@ export type GraphStore = {
     tags?: string[];
     sql?: string;
   }) => void;
+  deleteNode: (nodeId: string) => { success: boolean; error?: string };
+  deleteEdge: (edgeId: string) => void;
+  canDeleteNode: (nodeId: string) => { canDelete: boolean; reason?: string };
 
   // Persistence actions
   setCurrentProjectId: (id: string | null) => void;
@@ -121,10 +165,14 @@ export type GraphStore = {
   ) => void;
 };
 
-export const useGraphStore = create<GraphStore>((set, get) => ({
+export const useGraphStore = create<GraphStore>()(
+  temporal(
+    (set, get) => ({
   // Initial state
   nodes: [],
   edges: [],
+  deletedNodes: [],
+  deletedEdges: [],
   projectName: '',
   generatedAt: '',
   currentProjectId: null,
@@ -150,12 +198,25 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       });
     });
 
+    // Full reset - clear all state and set new graph
     set({
       nodes,
       edges,
       projectName: manifest.projectName,
       generatedAt: manifest.generatedAt,
-      inferredTagFilters: inferredTagSet, // Initialize with all inferred tags including 'base'
+      inferredTagFilters: inferredTagSet,
+      // Reset modification tracking
+      deletedNodes: [],
+      deletedEdges: [],
+      // Reset UI state
+      selectedNode: null,
+      searchQuery: '',
+      editingNodeId: null,
+      // Reset persistence state
+      currentProjectId: null,
+      savedProjectName: '',
+      hasUnsavedChanges: false,
+      isBlankProject: false,
     });
   },
 
@@ -231,6 +292,8 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     set({
       nodes: [],
       edges: [],
+      deletedNodes: [],
+      deletedEdges: [],
       projectName: '',
       generatedAt: '',
       searchQuery: '',
@@ -275,7 +338,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
 
   exportWorkPlan: () => {
     const state = get();
-    const { nodes, edges, projectName } = state;
+    const { nodes, edges, projectName, deletedNodes, deletedEdges } = state;
 
     // Get planned nodes (user-created)
     const plannedNodes = nodes.filter((n) => n.data.isUserCreated);
@@ -318,11 +381,33 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       inferredLayer: node.data.inferredTags?.[0] || null,
     }));
 
+    // Build modifications export - find modified manifest nodes
+    const modifiedNodes: ModifiedNode[] = nodes
+      .filter((n) => n.data.isModified && n.data.originalData)
+      .map((n) => ({
+        id: n.id,
+        originalLabel: n.data.originalData!.label,
+        newLabel: n.data.label,
+        originalDescription: n.data.originalData!.description,
+        newDescription: n.data.description || '',
+        originalType: n.data.originalData!.type,
+        newType: n.data.type,
+        originalTags: n.data.originalData!.tags || [],
+        newTags: n.data.tags || [],
+        originalSql: n.data.originalData!.sql || '',
+        newSql: n.data.sql || '',
+      }));
+
     return {
       projectName,
       generatedAt: new Date().toISOString(),
       plannedNodes: plannedNodesExport,
       upstreamContext: upstreamContextExport,
+      modifications: {
+        modifiedNodes,
+        deletedNodes,
+        deletedEdges,
+      },
     };
   },
 
@@ -394,6 +479,95 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         const desc = node.description ? node.description.slice(0, 50) + (node.description.length > 50 ? '...' : '') : '-';
         lines.push(`| ${node.name} | ${node.type} | ${node.inferredLayer || '-'} | ${desc} |`);
       });
+      lines.push('');
+    }
+
+    // Modifications Section
+    const { modifiedNodes, deletedNodes, deletedEdges } = workPlan.modifications;
+    const hasModifications = modifiedNodes.length > 0 || deletedNodes.length > 0 || deletedEdges.length > 0;
+
+    if (hasModifications) {
+      lines.push('---');
+      lines.push('');
+      lines.push('## Modifications to Existing Models');
+      lines.push('');
+
+      // Modified/Renamed Nodes - as actionable checklists
+      if (modifiedNodes.length > 0) {
+        lines.push('### Node Updates');
+        lines.push('');
+        modifiedNodes.forEach((mod) => {
+          lines.push(`- [ ] **${mod.originalLabel}** — \`${mod.id}\``);
+
+          // Rename task
+          if (mod.originalLabel !== mod.newLabel) {
+            lines.push(`  - [ ] Rename to \`${mod.newLabel}\``);
+          }
+
+          // Type change task
+          if (mod.originalType !== mod.newType) {
+            lines.push(`  - [ ] Change type from \`${mod.originalType}\` to \`${mod.newType}\``);
+          }
+
+          // Description update task
+          if (mod.originalDescription !== mod.newDescription) {
+            if (mod.newDescription) {
+              lines.push(`  - [ ] Update description to: "${mod.newDescription.slice(0, 100)}${mod.newDescription.length > 100 ? '...' : ''}"`);
+            } else {
+              lines.push(`  - [ ] Remove description`);
+            }
+          }
+
+          // Tags update task
+          const tagsChanged = JSON.stringify([...mod.originalTags].sort()) !== JSON.stringify([...mod.newTags].sort());
+          if (tagsChanged) {
+            const addedTags = mod.newTags.filter((t) => !mod.originalTags.includes(t));
+            const removedTags = mod.originalTags.filter((t) => !mod.newTags.includes(t));
+            if (addedTags.length > 0) {
+              lines.push(`  - [ ] Add tags: ${addedTags.map(t => `\`${t}\``).join(', ')}`);
+            }
+            if (removedTags.length > 0) {
+              lines.push(`  - [ ] Remove tags: ${removedTags.map(t => `\`${t}\``).join(', ')}`);
+            }
+          }
+
+          // SQL/Pseudo code update task
+          if (mod.originalSql !== mod.newSql) {
+            if (mod.newSql) {
+              lines.push(`  - [ ] Update SQL/logic`);
+            } else {
+              lines.push(`  - [ ] Remove SQL/logic`);
+            }
+          }
+        });
+        lines.push('');
+      }
+
+      // Deleted Nodes - as actionable checklists
+      if (deletedNodes.length > 0) {
+        lines.push('### Nodes to Remove');
+        lines.push('');
+        deletedNodes.forEach((node) => {
+          lines.push(`- [ ] **${node.label}** (${node.type})`);
+          lines.push(`  - [ ] Delete the ${node.type} file`);
+          lines.push(`  - [ ] Remove from schema.yml if present`);
+          lines.push(`  - [ ] Update any downstream refs`);
+        });
+        lines.push('');
+      }
+
+      // Deleted Edges - as actionable checklists
+      if (deletedEdges.length > 0) {
+        lines.push('### Dependencies to Remove');
+        lines.push('');
+        deletedEdges.forEach((edge) => {
+          lines.push(`- [ ] **${edge.targetLabel}** → remove dependency on \`${edge.sourceLabel}\``);
+          lines.push(`  - [ ] Open \`${edge.targetLabel}\` model file`);
+          lines.push(`  - [ ] Remove \`ref('${edge.sourceLabel}')\` or \`source()\` call`);
+          lines.push(`  - [ ] Test the model compiles`);
+        });
+        lines.push('');
+      }
     }
 
     return lines.join('\n');
@@ -507,23 +681,111 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
 
   updateNodeMetadata: (nodeId, metadata) =>
     set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                ...(metadata.label !== undefined && { label: metadata.label }),
-                ...(metadata.description !== undefined && { description: metadata.description }),
-                ...(metadata.type !== undefined && { type: metadata.type }),
-                ...(metadata.tags !== undefined && { tags: metadata.tags }),
-                ...(metadata.sql !== undefined && { sql: metadata.sql }),
+      nodes: state.nodes.map((node) => {
+        if (node.id !== nodeId) return node;
+
+        // For manifest nodes (not user-created), track original values on first edit
+        const isManifestNode = !node.data.isUserCreated;
+        const needsOriginalTracking = isManifestNode && !node.data.originalData;
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            ...(metadata.label !== undefined && { label: metadata.label }),
+            ...(metadata.description !== undefined && { description: metadata.description }),
+            ...(metadata.type !== undefined && { type: metadata.type }),
+            ...(metadata.tags !== undefined && { tags: metadata.tags }),
+            ...(metadata.sql !== undefined && { sql: metadata.sql }),
+            // Track original values for manifest nodes
+            ...(needsOriginalTracking && {
+              originalData: {
+                label: node.data.label,
+                description: node.data.description || '',
+                type: node.data.type,
+                tags: node.data.tags || [],
+                sql: node.data.sql || '',
               },
-            }
-          : node
-      ),
+            }),
+            // Mark as modified if it's a manifest node
+            ...(isManifestNode && { isModified: true }),
+          },
+        };
+      }),
       hasUnsavedChanges: true,
     })),
+
+  canDeleteNode: (nodeId) => {
+    const state = get();
+    // Check if node has any downstream dependencies (outgoing edges)
+    const hasDownstream = state.edges.some((edge) => edge.source === nodeId);
+    if (hasDownstream) {
+      return { canDelete: false, reason: 'Cannot delete: this node has downstream dependencies' };
+    }
+    return { canDelete: true };
+  },
+
+  deleteNode: (nodeId) => {
+    const state = get();
+    const { canDelete, reason } = state.canDeleteNode(nodeId);
+
+    if (!canDelete) {
+      return { success: false, error: reason };
+    }
+
+    const nodeToDelete = state.nodes.find((n) => n.id === nodeId);
+    if (!nodeToDelete) {
+      return { success: false, error: 'Node not found' };
+    }
+
+    // Track the deletion if it's a manifest node
+    const isManifestNode = !nodeToDelete.data.isUserCreated;
+
+    set((s) => ({
+      nodes: s.nodes.filter((n) => n.id !== nodeId),
+      edges: s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+      deletedNodes: isManifestNode
+        ? [...s.deletedNodes, { id: nodeId, label: nodeToDelete.data.label, type: nodeToDelete.data.type }]
+        : s.deletedNodes,
+      hasUnsavedChanges: true,
+      selectedNode: s.selectedNode?.id === nodeId ? null : s.selectedNode,
+    }));
+
+    return { success: true };
+  },
+
+  deleteEdge: (edgeId) => {
+    const state = get();
+    const edgeToDelete = state.edges.find((e) => e.id === edgeId);
+
+    if (!edgeToDelete) return;
+
+    // Get node labels for tracking
+    const sourceNode = state.nodes.find((n) => n.id === edgeToDelete.source);
+    const targetNode = state.nodes.find((n) => n.id === edgeToDelete.target);
+
+    // Only track deletion if this involves at least one manifest node
+    const involvesManifestNode =
+      (sourceNode && !sourceNode.data.isUserCreated) ||
+      (targetNode && !targetNode.data.isUserCreated);
+
+    set((s) => ({
+      edges: s.edges.filter((e) => e.id !== edgeId),
+      deletedEdges: involvesManifestNode
+        ? [
+            ...s.deletedEdges,
+            {
+              id: edgeId,
+              sourceId: edgeToDelete.source,
+              sourceLabel: sourceNode?.data.label || edgeToDelete.source,
+              targetId: edgeToDelete.target,
+              targetLabel: targetNode?.data.label || edgeToDelete.target,
+            },
+          ]
+        : s.deletedEdges,
+      hasUnsavedChanges: true,
+    }));
+  },
 
   // Persistence actions
   setCurrentProjectId: (id) =>
@@ -545,6 +807,8 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     set({
       nodes: [],
       edges: [],
+      deletedNodes: [],
+      deletedEdges: [],
       projectName: 'Untitled Project',
       generatedAt: new Date().toISOString(),
       currentProjectId: null,
@@ -576,4 +840,17 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       inferredTagFilters: filters.inferredTagFilters,
       inferredTagFilterMode: filters.inferredTagFilterMode,
     }),
-}));
+}),
+    {
+      // Temporal options
+      limit: 50, // Maximum history length
+      // Only track state relevant to graph editing, not UI state
+      partialize: (state) => ({
+        nodes: state.nodes,
+        edges: state.edges,
+        deletedNodes: state.deletedNodes,
+        deletedEdges: state.deletedEdges,
+      }),
+    }
+  )
+);

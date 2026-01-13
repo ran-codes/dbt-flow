@@ -22,6 +22,7 @@ import { useGraphStore } from '@/store/useGraphStore';
 import { filterNodes, getNodeColor, getLayoutedElements, getAncestors, getDescendants } from '@/lib/graphBuilder';
 import FilterBar from './FilterBar';
 import CustomNode from './CustomNode';
+import CustomEdge from './CustomEdge';
 import NodeDetailsPanel from './NodeDetailsPanel';
 import type { GraphNode } from '@/lib/graphBuilder';
 
@@ -29,8 +30,12 @@ const nodeTypes = {
   default: CustomNode,
 };
 
+const edgeTypes = {
+  custom: CustomEdge,
+};
+
 function LineageGraphInner() {
-  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, addEdge, updateNodeMetadata, isBlankProject } = useGraphStore();
+  const { nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, setSelectedNode, selectedNode, addDownstreamNode, addStandaloneNode, addEdge, updateNodeMetadata, isBlankProject, deleteNode, deleteEdge, canDeleteNode } = useGraphStore();
   const [filteredNodes, setFilteredNodes] = useState<Node[]>(nodes);
   const [filteredEdges, setFilteredEdges] = useState<Edge[]>(edges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
@@ -38,11 +43,16 @@ function LineageGraphInner() {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [hiddenNodes, setHiddenNodes] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [edgeContextMenu, setEdgeContextMenu] = useState<{ x: number; y: number; edgeId: string; sourceLabel: string; targetLabel: string } | null>(null);
   const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const hasAutoRelayoutRef = useRef(false);
   const { fitView, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track the current project to detect project switches
+  const currentProjectRef = useRef<string>('');
 
   // Update filtered data when search query, resource filters, or data changes
   useEffect(() => {
@@ -51,11 +61,24 @@ function LineageGraphInner() {
 
     const { nodes: filtered, edges: filteredE } = filterNodes(nodes, edges, searchQuery, resourceTypeFilters, tagFilters, tagFilterMode, inferredTagFilters, 'OR');
 
-    // Apply layout and set nodes
-    if (filtered.length > 0 && !hasAutoRelayoutRef.current) {
+    // Detect if this is a completely new project (different set of node IDs)
+    const newNodeIds = new Set(filtered.map(n => n.id));
+    const isNewProject = filtered.length > 0 &&
+      (currentProjectRef.current === '' ||
+       !filtered.some(n => currentProjectRef.current.includes(n.id.split('.')[1] || '')));
+
+    // Update project reference using first node's project identifier
+    if (filtered.length > 0) {
+      const firstNodeProject = filtered[0].id.split('.')[1] || filtered[0].id;
+      currentProjectRef.current = firstNodeProject;
+    }
+
+    // Apply layout and set nodes - do full reset for new projects
+    if (filtered.length > 0 && (!hasAutoRelayoutRef.current || isNewProject)) {
       const layouted = getLayoutedElements(filtered as any[], filteredE as any[]);
       setFilteredNodes(layouted.nodes);
       setFilteredEdges(filteredE);
+      setHiddenNodes(new Set());
 
       // Fit view on initial load (max 100% zoom)
       setTimeout(() => {
@@ -79,9 +102,9 @@ function LineageGraphInner() {
           return node;
         });
 
-        // Also keep any local nodes not yet in filtered (e.g., newly added nodes)
+        // Only keep user-created nodes (not from previous projects)
         prevNodes.forEach(prevNode => {
-          if (!filteredNodeIds.has(prevNode.id)) {
+          if (!filteredNodeIds.has(prevNode.id) && prevNode.data?.isUserCreated) {
             result.push(prevNode);
           }
         });
@@ -90,8 +113,14 @@ function LineageGraphInner() {
       });
       setFilteredEdges((prevEdges) => {
         const filteredEdgeIds = new Set(filteredE.map(e => e.id));
-        // Keep any local edges not yet in filtered
-        const extraEdges = prevEdges.filter(e => !filteredEdgeIds.has(e.id));
+        // Only keep edges connected to user-created nodes
+        const extraEdges = prevEdges.filter(e => {
+          if (filteredEdgeIds.has(e.id)) return false;
+          // Check if this edge connects to a user-created node
+          const sourceNode = nodes.find(n => n.id === e.source);
+          const targetNode = nodes.find(n => n.id === e.target);
+          return sourceNode?.data?.isUserCreated || targetNode?.data?.isUserCreated;
+        });
         return [...filteredE, ...extraEdges];
       });
     }
@@ -163,7 +192,7 @@ function LineageGraphInner() {
       // Get all ancestors and descendants
       const ancestors = getAncestors(nodeId, nodes, edges);
       const descendants = getDescendants(nodeId, nodes, edges);
-      const focusedNodes = new Set([...ancestors, ...descendants]);
+      const focusedNodes = new Set([nodeId, ...ancestors, ...descendants]);
 
       // Filter nodes to only show the lineage
       const lineageNodes = filteredNodes.filter((node) => focusedNodes.has(node.id));
@@ -272,6 +301,94 @@ function LineageGraphInner() {
     [updateNodeMetadata, selectedNode, setSelectedNode]
   );
 
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setContextMenu(null);
+      setDeleteError(null);
+
+      const result = deleteNode(nodeId);
+      if (!result.success && result.error) {
+        setDeleteError(result.error);
+        // Auto-clear error after 3 seconds
+        setTimeout(() => setDeleteError(null), 3000);
+        return;
+      }
+
+      // Also remove from local filtered state
+      setFilteredNodes((prev) => prev.filter((n) => n.id !== nodeId));
+      setFilteredEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId));
+
+      // Clear selection if the deleted node was selected
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null);
+      }
+    },
+    [deleteNode, selectedNode, setSelectedNode]
+  );
+
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      deleteEdge(edgeId);
+      setEdgeContextMenu(null);
+      // Also remove from local filtered state
+      setFilteredEdges((prev) => prev.filter((e) => e.id !== edgeId));
+    },
+    [deleteEdge]
+  );
+
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault();
+      const sourceNode = filteredNodes.find((n) => n.id === edge.source);
+      const targetNode = filteredNodes.find((n) => n.id === edge.target);
+      setEdgeContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        edgeId: edge.id,
+        sourceLabel: sourceNode?.data.label || edge.source,
+        targetLabel: targetNode?.data.label || edge.target,
+      });
+    },
+    [filteredNodes]
+  );
+
+  // Edge hover handlers for showing delete button
+  const onEdgeMouseEnter = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      setFilteredEdges((eds) =>
+        eds.map((e) =>
+          e.id === edge.id
+            ? { ...e, data: { ...e.data, isHovered: true } }
+            : e
+        )
+      );
+    },
+    []
+  );
+
+  const onEdgeMouseLeave = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      setFilteredEdges((eds) =>
+        eds.map((e) =>
+          e.id === edge.id
+            ? { ...e, data: { ...e.data, isHovered: false } }
+            : e
+        )
+      );
+    },
+    []
+  );
+
+  // Sync edge deletions from React Flow to our store
+  const onEdgesDelete = useCallback(
+    (deletedEdges: Edge[]) => {
+      deletedEdges.forEach((edge) => {
+        deleteEdge(edge.id);
+      });
+    },
+    [deleteEdge]
+  );
+
   const handleAddDownstream = useCallback(
     (parentNodeId: string) => {
       setContextMenu(null);
@@ -375,10 +492,37 @@ function LineageGraphInner() {
   useEffect(() => {
     const handleClick = () => {
       setContextMenu(null);
+      setEdgeContextMenu(null);
       setCanvasContextMenu(null);
     };
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+Z (undo) or Ctrl+Shift+Z (redo)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        const temporal = useGraphStore.temporal.getState();
+        if (e.shiftKey) {
+          // Redo
+          temporal.redo();
+        } else {
+          // Undo
+          temporal.undo();
+        }
+      }
+      // Also support Ctrl+Y for redo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        useGraphStore.temporal.getState().redo();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Track zoom level
@@ -525,7 +669,7 @@ function LineageGraphInner() {
 
   const styledEdges = visibleEdges.map((edge) => ({
     ...edge,
-    type: 'default', // Use curved bezier edges
+    type: 'custom', // Use custom edge with hover delete button
     style: {
       ...edge.style,
       stroke: highlightedEdges.has(edge.id) ? '#3b82f6' : '#64748b',
@@ -545,10 +689,14 @@ function LineageGraphInner() {
         nodes={styledNodes}
         edges={styledEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onEdgesDelete={onEdgesDelete}
+        onEdgeMouseEnter={onEdgeMouseEnter}
+        onEdgeMouseLeave={onEdgeMouseLeave}
         onConnect={onConnect}
         onPaneClick={onPaneClick}
         onPaneContextMenu={(event) => {
@@ -654,6 +802,27 @@ function LineageGraphInner() {
             </svg>
             Add Node Downstream
           </button>
+          {/* Delete Node - only show if no downstream dependencies */}
+          {(() => {
+            const { canDelete, reason } = canDeleteNode(contextMenu.nodeId);
+            return (
+              <button
+                className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2 ${
+                  canDelete
+                    ? 'hover:bg-red-50 text-red-600'
+                    : 'text-slate-400 cursor-not-allowed'
+                }`}
+                onClick={() => canDelete && handleDeleteNode(contextMenu.nodeId)}
+                title={reason || 'Delete this node'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete Node
+                {!canDelete && <span className="text-xs ml-auto">(has dependents)</span>}
+              </button>
+            );
+          })()}
           <hr className="my-2 border-slate-200" />
           <button
             className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition-colors flex items-center gap-2 text-slate-600"
@@ -673,6 +842,31 @@ function LineageGraphInner() {
         </div>
       )}
 
+      {/* Edge Context Menu */}
+      {edgeContextMenu && (
+        <div
+          className="absolute bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50 min-w-[200px]"
+          style={{
+            left: `${edgeContextMenu.x}px`,
+            top: `${edgeContextMenu.y}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100">
+            {edgeContextMenu.sourceLabel} → {edgeContextMenu.targetLabel}
+          </div>
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 transition-colors flex items-center gap-2 text-red-600"
+            onClick={() => handleDeleteEdge(edgeContextMenu.edgeId)}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Remove Link
+          </button>
+        </div>
+      )}
+
       {/* Canvas Context Menu (for adding standalone nodes) */}
       {canvasContextMenu && (
         <div
@@ -688,6 +882,24 @@ function LineageGraphInner() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Add Node
+          </button>
+        </div>
+      )}
+
+      {/* Delete error toast */}
+      {deleteError && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm font-medium">{deleteError}</span>
+          <button
+            onClick={() => setDeleteError(null)}
+            className="ml-2 text-red-500 hover:text-red-700"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
       )}

@@ -13,6 +13,14 @@ export type GraphNode = Node<{
   tags?: string[];
   inferredTags?: string[];
   isUserCreated?: boolean;
+  isModified?: boolean;
+  originalData?: {
+    label: string;
+    description: string;
+    type: string;
+    tags: string[];
+    sql: string;
+  };
   materialized?: boolean;
   rawManifest?: Record<string, unknown>;
   meta?: DbtNodeMeta;

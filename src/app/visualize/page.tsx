@@ -78,6 +78,7 @@ function VisualizeContent() {
   const [editedTitle, setEditedTitle] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const projectLoadedRef = useRef(false);
+  const loadedSampleRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,22 +88,33 @@ function VisualizeContent() {
 
   // Load project from URL param or start blank project
   useEffect(() => {
-    if (!mounted || projectLoadedRef.current) return;
+    if (!mounted) return;
 
     const projectId = searchParams.get('project');
     const sampleId = searchParams.get('sample');
     const isBlank = searchParams.get('blank') === 'true';
 
+    // Check if we need to load a different sample
+    const sampleChanged = sampleId && loadedSampleRef.current !== sampleId;
+    if (sampleChanged) {
+      projectLoadedRef.current = false;
+      loadedSampleRef.current = null;
+    }
+
+    if (projectLoadedRef.current) return;
+
     if (isBlank && !isBlankProject) {
       projectLoadedRef.current = true;
+      loadedSampleRef.current = null;
       startBlankProject();
       // Clean up URL
       router.replace('/visualize');
-    } else if (sampleId && nodes.length === 0) {
+    } else if (sampleId) {
       // Load sample project
       const sample = SAMPLE_PROJECTS[sampleId.toLowerCase()];
       if (sample) {
         projectLoadedRef.current = true;
+        loadedSampleRef.current = sampleId;
         const loadSample = async () => {
           try {
             const currentPath = window.location.pathname.endsWith('/')
@@ -142,6 +154,7 @@ function VisualizeContent() {
       }
     } else if (projectId && nodes.length === 0) {
       projectLoadedRef.current = true;
+      loadedSampleRef.current = null;
       loadProject(projectId).then((project) => {
         if (project) {
           const filters = deserializeFilters(project.filters);
