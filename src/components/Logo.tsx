@@ -17,22 +17,26 @@ export default function Logo({ size = 'sm', className = '' }: LogoProps) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Hex outline */}
-      <path
-        d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z"
+      {/* Hexagon frame */}
+      <polygon
+        points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5"
+        fill="none"
         stroke="#1e293b"
-        strokeWidth="2.5"
+        strokeWidth="3"
+      />
+
+      {/* Orange angle bracket (dbt homage) */}
+      <path
+        d="M57 25L22 50L57 75"
+        stroke="#FF694A"
+        strokeWidth="11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         fill="none"
       />
 
-      {/* Top layer (mart - dark, narrowest) */}
-      <rect x="35" y="25" width="30" height="11" rx="2.5" fill="#1e293b" />
-
-      {/* Middle layer (staging - gray) */}
-      <rect x="26" y="41.5" width="48" height="11" rx="2.5" fill="#64748b" />
-
-      {/* Bottom layer (source - orange, widest) */}
-      <rect x="17" y="58" width="66" height="11" rx="2.5" fill="#FF694A" />
+      {/* Planning node */}
+      <circle cx="70" cy="50" r="9" fill="#1e293b" />
     </svg>
   );
 }

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logos/production/logo-a.svg" alt="dbt-planner logo" width="120" height="120">
+</p>
+
 # dbt-planner
 
 A browser-based tool for visualizing dbt project lineage and planning model changes. Explore your dbt DAG, propose new models, and understand data flow—all without leaving your browser.
