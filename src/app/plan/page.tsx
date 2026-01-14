@@ -122,7 +122,7 @@ function VisualizeContent() {
     if (targetType === 'blank') {
       startBlankProject();
       setLoadedSource({ type: 'blank', id: null });
-      router.replace('/visualize');
+      router.replace('/plan');
     } else if (targetType === 'sample' && targetId) {
       const sample = SAMPLE_PROJECTS[targetId];
       if (sample) {
@@ -132,7 +132,7 @@ function VisualizeContent() {
             const currentPath = window.location.pathname.endsWith('/')
               ? window.location.pathname.slice(0, -1)
               : window.location.pathname;
-            const basePath = currentPath.replace('/visualize', '');
+            const basePath = currentPath.replace('/plan', '');
             const manifestUrl = `${window.location.origin}${basePath}/${sample.file}`;
             const response = await fetch(manifestUrl);
 
@@ -368,7 +368,7 @@ function VisualizeContent() {
 
       // Update URL if this was a new save
       if (isNew) {
-        router.replace(`/visualize?project=${id}`);
+        router.replace(`/plan?project=${id}`);
       }
     }
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Logo from './Logo';
 
 interface NavbarProps {
-  projectTitle?: React.ReactNode;  // Project name area (for visualize page)
+  projectTitle?: React.ReactNode;  // Project name area (for plan page)
   children?: React.ReactNode;      // Center content (search)
   actions?: React.ReactNode;       // Right-side action buttons
 }
@@ -22,7 +22,7 @@ export default function Navbar({
         <span className="text-lg font-semibold text-slate-900">dbt-planner</span>
       </Link>
 
-      {/* Center: Project title + Search + Actions (visualize page) */}
+      {/* Center: Project title + Search + Actions (plan page) */}
       {(projectTitle || children || actions) && (
         <div className="flex-1 flex items-center justify-center gap-4">
           {projectTitle}

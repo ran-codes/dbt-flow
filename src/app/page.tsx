@@ -74,7 +74,7 @@ export default function Home() {
       const manifest = await fetchManifest(url);
       const { nodes, edges } = buildGraph(manifest.nodes);
       setGraph(nodes, edges, manifest);
-      router.push('/visualize');
+      router.push('/plan');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse manifest');
     } finally {
@@ -112,7 +112,7 @@ export default function Home() {
 
       const { nodes, edges } = buildGraph(parsed.nodes);
       setGraph(nodes, edges, parsed);
-      router.push('/visualize');
+      router.push('/plan');
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to load ${projectName} demo`);
     } finally {
@@ -131,7 +131,7 @@ export default function Home() {
       const manifest = await parseManifestFile(file);
       const { nodes, edges } = buildGraph(manifest.nodes);
       setGraph(nodes, edges, manifest);
-      router.push('/visualize');
+      router.push('/plan');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse manifest file');
     } finally {
@@ -163,7 +163,7 @@ export default function Home() {
 
       const { nodes, edges } = buildGraph(parsed.nodes);
       setGraph(nodes, edges, parsed);
-      router.push('/visualize');
+      router.push('/plan');
     } catch (err) {
       if (err instanceof SyntaxError) {
         setError('Invalid JSON format. Please check your pasted content.');
@@ -176,7 +176,7 @@ export default function Home() {
   };
 
   const handleOpenProject = (projectId: string) => {
-    router.push(`/visualize?project=${projectId}`);
+    router.push(`/plan?project=${projectId}`);
   };
 
   const handleDeleteProject = async (projectId: string) => {
@@ -301,7 +301,7 @@ export default function Home() {
         // Refresh the list and navigate to the project
         const projects = await listProjects();
         setSavedProjects(projects);
-        router.push(`/visualize?project=${newId}`);
+        router.push(`/plan?project=${newId}`);
       } else {
         throw new Error('Failed to save imported project');
       }
@@ -413,7 +413,7 @@ export default function Home() {
 
             {/* Start Blank Project Button */}
             <button
-              onClick={() => router.push('/visualize?blank=true')}
+              onClick={() => router.push('/plan?blank=true')}
               disabled={isLoading}
               className="flex-1 px-4 py-3 text-sm font-medium text-slate-900 border border-slate-900 rounded-md hover:bg-slate-50 transition-colors"
             >
@@ -438,28 +438,28 @@ export default function Home() {
               {sampleDropdownOpen && (
                 <div className="absolute left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
                   <button
-                    onClick={() => router.push('/visualize?sample=jaffle')}
+                    onClick={() => router.push('/plan?sample=jaffle')}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                   >
                     <span className="text-slate-900">Jaffle Shop</span>
                     <span className="block text-xs text-slate-500">Classic dbt tutorial</span>
                   </button>
                   <button
-                    onClick={() => router.push('/visualize?sample=warehouse')}
+                    onClick={() => router.push('/plan?sample=warehouse')}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                   >
                     <span className="text-slate-900">Data Warehouse</span>
                     <span className="block text-xs text-slate-500">Custom layers</span>
                   </button>
                   <button
-                    onClick={() => router.push('/visualize?sample=lakehouse')}
+                    onClick={() => router.push('/plan?sample=lakehouse')}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                   >
                     <span className="text-slate-900">Lakehouse</span>
                     <span className="block text-xs text-slate-500">Multi-layer architecture</span>
                   </button>
                   <button
-                    onClick={() => router.push('/visualize?sample=salurbal')}
+                    onClick={() => router.push('/plan?sample=salurbal')}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
                   >
                     <span className="text-slate-900">SALURBAL Mortality</span>

@@ -90,7 +90,7 @@ Right-click any node to:
 src/
 ├── app/                  # Next.js pages
 │   ├── page.tsx          # Home/project list
-│   └── visualize/        # Graph visualization
+│   └── plan/             # Planning & visualization
 ├── components/
 │   ├── LineageGraph.tsx  # Main graph component
 │   ├── FilterBar.tsx     # Bottom filter toolbar
