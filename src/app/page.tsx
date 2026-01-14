@@ -358,7 +358,7 @@ export default function Home() {
 
         {/* Get Started Section */}
         <section className="mb-10">
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-slate-900 uppercase tracking-wide mb-3">
             Get Started
           </h2>
           <div className="border border-slate-200 rounded-lg p-4">
@@ -372,7 +372,7 @@ export default function Home() {
                     setSampleDropdownOpen(false);
                   }}
                   disabled={isLoading}
-                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                 >
                   Import dbt Project
                   <svg className={`w-4 h-4 transition-transform ${manifestDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,7 +386,7 @@ export default function Home() {
                         setActiveManifestOption('url');
                         setManifestDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-900"
                     >
                       Enter URL
                     </button>
@@ -395,7 +395,7 @@ export default function Home() {
                         manifestUploadRef.current?.click();
                         setManifestDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-900"
                     >
                       Upload file
                     </button>
@@ -404,7 +404,7 @@ export default function Home() {
                         setActiveManifestOption('paste');
                         setManifestDropdownOpen(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-700"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors text-slate-900"
                     >
                       Paste JSON
                     </button>
@@ -416,7 +416,7 @@ export default function Home() {
               <button
                 onClick={() => router.push('/visualize?blank=true')}
                 disabled={isLoading}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
               >
                 Start Blank Project
               </button>
@@ -429,7 +429,7 @@ export default function Home() {
                     setManifestDropdownOpen(false);
                   }}
                   disabled={isLoading}
-                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                 >
                   Open Sample Project
                   <svg className={`w-4 h-4 transition-transform ${sampleDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -475,7 +475,7 @@ export default function Home() {
             {activeManifestOption === 'url' && (
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <form onSubmit={handleUrlSubmit}>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-900 mb-2">
                     dbt Docs URL
                   </label>
                   <div className="flex gap-2">
@@ -499,7 +499,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => setActiveManifestOption(null)}
-                      className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
+                      className="px-3 py-2 text-sm text-slate-500 hover:text-slate-900"
                     >
                       Cancel
                     </button>
@@ -510,7 +510,7 @@ export default function Home() {
 
             {activeManifestOption === 'paste' && (
               <div className="mt-4 pt-4 border-t border-slate-200">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-900 mb-2">
                   Paste manifest.json
                 </label>
                 <textarea
@@ -534,7 +534,7 @@ export default function Home() {
                       setActiveManifestOption(null);
                       setJsonText('');
                     }}
-                    className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700"
+                    className="px-4 py-2 text-sm text-slate-500 hover:text-slate-900"
                   >
                     Cancel
                   </button>
@@ -547,7 +547,7 @@ export default function Home() {
         {/* Saved Projects Section */}
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3 gap-4">
-            <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide whitespace-nowrap">
+            <h2 className="text-sm font-medium text-slate-900 uppercase tracking-wide whitespace-nowrap">
               Saved Projects {savedProjects.length > 0 && `(${savedProjects.length})`}
             </h2>
             <div className="flex items-center gap-2 flex-1 justify-end">
@@ -579,19 +579,19 @@ export default function Home() {
                   <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
                     <button
                       onClick={() => { setSortOrder('recent'); setSortDropdownOpen(false); }}
-                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'recent' ? 'text-slate-900 font-medium' : 'text-slate-600'}`}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'recent' ? 'text-slate-900 font-medium' : 'text-slate-900'}`}
                     >
                       Recent first
                     </button>
                     <button
                       onClick={() => { setSortOrder('name-asc'); setSortDropdownOpen(false); }}
-                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'name-asc' ? 'text-slate-900 font-medium' : 'text-slate-600'}`}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'name-asc' ? 'text-slate-900 font-medium' : 'text-slate-900'}`}
                     >
                       Name A-Z
                     </button>
                     <button
                       onClick={() => { setSortOrder('name-desc'); setSortDropdownOpen(false); }}
-                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'name-desc' ? 'text-slate-900 font-medium' : 'text-slate-600'}`}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'name-desc' ? 'text-slate-900 font-medium' : 'text-slate-900'}`}
                     >
                       Name Z-A
                     </button>
@@ -616,7 +616,7 @@ export default function Home() {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => handleOpenProject(project.id)}
-                      className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                      className="px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
                     >
                       Open
                     </button>
@@ -642,11 +642,11 @@ export default function Home() {
             </div>
           )}
           {/* Database backup/restore */}
-          <div className="mt-3 flex items-center justify-end gap-4 text-sm">
+          <div className="mt-3 flex items-center justify-end gap-3 text-sm">
             <button
               onClick={handleBackupDatabase}
               disabled={isLoading || savedProjects.length === 0}
-              className="text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -656,7 +656,7 @@ export default function Home() {
             <button
               onClick={() => restoreInputRef.current?.click()}
               disabled={isLoading}
-              className="text-slate-500 hover:text-slate-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
