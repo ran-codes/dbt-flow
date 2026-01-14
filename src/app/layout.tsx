@@ -14,8 +14,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dbt-planner",
-  description: "Interactive dbt Lineage Visualization",
+  title: "dbt-planner | Interactive dbt Lineage Visualization & Planning Tool",
+  description: "Free browser-based tool for visualizing dbt project lineage, planning model changes, and analyzing data pipeline dependencies. No backend required - works with any manifest.json.",
+  keywords: ["dbt", "dbt lineage", "dbt visualization", "data lineage", "DAG visualization", "dbt manifest", "data pipeline", "dbt planning", "dbt impact analysis", "data modeling", "analytics engineering"],
+  authors: [{ name: "dbt-planner" }],
+  openGraph: {
+    title: "dbt-planner | Interactive dbt Lineage Visualization",
+    description: "Visualize your dbt DAG, plan model changes, and analyze dependencies - all in your browser. Free and open source.",
+    type: "website",
+    url: "https://ranli.dev/dbt-planner/",
+    siteName: "dbt-planner",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "dbt-planner | dbt Lineage Visualization Tool",
+    description: "Free browser-based tool for visualizing dbt lineage and planning model changes.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

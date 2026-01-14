@@ -1,0 +1,49 @@
+# dbt-planner
+
+> Free, browser-based dbt lineage visualization and planning tool.
+
+## What is this?
+
+dbt-planner is a web application for visualizing dbt (data build tool) project lineage graphs. It helps data engineers and analytics engineers:
+
+- Visualize DAG (Directed Acyclic Graph) from manifest.json
+- Plan new models before writing code
+- Analyze upstream/downstream dependencies
+- Export work plans as Markdown or JSON
+
+## Key Features
+
+- Load any dbt manifest.json (via URL, file upload, or paste)
+- Interactive graph navigation (pan, zoom, select)
+- Filter by layer (source, staging, intermediate, mart)
+- Filter by resource type (model, source, seed, test)
+- Filter by tags (AND/OR mode)
+- Focus mode for upstream/downstream analysis
+- Add proposed models visually
+- Edit node metadata (description, tags, SQL)
+- Export work plans (Markdown with JSON)
+- Local browser storage (no backend)
+
+## Technical Details
+
+- Built with Next.js 15, React Flow, Zustand, Tailwind CSS
+- Static export (works on GitHub Pages)
+- No server-side processing - all data stays in browser
+- Parses dbt manifest.json format
+
+## URLs
+
+- Live app: https://ranli.dev/dbt-planner/
+- Source code: https://github.com/ran-codes/dbt-planner
+
+## Usage
+
+1. Visit the app URL
+2. Import a dbt project (URL, file, or paste manifest.json)
+3. Explore the lineage graph
+4. Plan changes by adding nodes
+5. Export work plan
+
+## Contact
+
+GitHub Issues: https://github.com/ran-codes/dbt-planner/issues

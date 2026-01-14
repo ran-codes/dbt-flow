@@ -1,0 +1,11 @@
+# robots.txt for dbt-planner
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://ranli.dev/dbt-planner/sitemap.xml
+
+# AI/LLM agents
+# See llms.txt for structured information about this site
+# https://ranli.dev/dbt-planner/llms.txt
