@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logos/production/logo-a.svg" alt="dbt-planner logo" width="120" height="120">
+  <img src="public/logo.svg" alt="dbt-planner logo" width="120" height="120">
 </p>
 
 # dbt-planner
