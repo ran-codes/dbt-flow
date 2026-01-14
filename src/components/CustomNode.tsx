@@ -35,12 +35,12 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
       >
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
-            <div className="text-white font-semibold text-sm truncate flex-1">
+            <div className="text-slate-900 font-semibold text-sm truncate flex-1">
               {data.label}
             </div>
             {data.isModified && !data.isUserCreated && (
               <div className="flex-shrink-0" title="Modified from manifest">
-                <svg className="w-3.5 h-3.5 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                 </svg>
               </div>
@@ -57,13 +57,13 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
             </div>
           )}
 
-          {/* Inferred Tags (orange/amber) */}
+          {/* Inferred Tags */}
           {data.inferredTags && data.inferredTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {data.inferredTags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] rounded font-medium"
+                  className="px-1.5 py-0.5 bg-slate-900/20 text-slate-700 text-[10px] rounded font-medium"
                   title={`Inferred: ${tag}`}
                 >
                   {tag}
@@ -72,13 +72,13 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
             </div>
           )}
 
-          {/* Regular Tags (white/transparent) */}
+          {/* Regular Tags */}
           {data.tags && data.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {data.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="px-1.5 py-0.5 bg-white/25 text-white text-[10px] rounded font-medium"
+                  className="px-1.5 py-0.5 bg-slate-900/10 text-slate-600 text-[10px] rounded font-medium"
                   title={tag}
                 >
                   {tag}
@@ -86,7 +86,7 @@ function CustomNode({ data, selected }: NodeProps<GraphNode['data']>) {
               ))}
               {data.tags.length > 3 && (
                 <span
-                  className="px-1.5 py-0.5 bg-white/25 text-white text-[10px] rounded font-medium"
+                  className="px-1.5 py-0.5 bg-slate-900/10 text-slate-600 text-[10px] rounded font-medium"
                   title={data.tags.slice(3).join(', ')}
                 >
                   +{data.tags.length - 3}

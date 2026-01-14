@@ -48,7 +48,6 @@ function VisualizeContent() {
     searchQuery,
     setSearchQuery,
     setGraph,
-    exportWorkPlan,
     exportWorkPlanMarkdown,
     currentProjectId,
     savedProjectName,
@@ -213,14 +212,6 @@ function VisualizeContent() {
   }, [saveStatus]);
 
 
-  const handleExportJSON = () => {
-    const workPlan = exportWorkPlan();
-    setExportContent(JSON.stringify(workPlan, null, 2));
-    setExportFormat('json');
-    setIsExportModalOpen(true);
-    setIsDropdownOpen(false);
-  };
-
   const handleExportMarkdown = () => {
     const markdown = exportWorkPlanMarkdown();
     setExportContent(markdown);
@@ -250,20 +241,13 @@ function VisualizeContent() {
       manifestInfo: { projectName, generatedAt },
     };
 
-    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${savedProjectName || projectName}-project.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setExportContent(JSON.stringify(project, null, 2));
+    setExportFormat('json');
+    setIsExportModalOpen(true);
     setIsDropdownOpen(false);
   };
 
   const handleExportMinimalGraph = () => {
-    // Minimal graph structure - just enough to reconstruct the DAG
     const minimalGraph = {
       projectName,
       generatedAt,
@@ -280,15 +264,9 @@ function VisualizeContent() {
       })),
     };
 
-    const blob = new Blob([JSON.stringify(minimalGraph, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${savedProjectName || projectName}-graph.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setExportContent(JSON.stringify(minimalGraph, null, 2));
+    setExportFormat('json');
+    setIsExportModalOpen(true);
     setIsDropdownOpen(false);
   };
 
@@ -477,37 +455,28 @@ function VisualizeContent() {
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
-                  <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Work Plan</div>
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
                   <button
                     onClick={handleExportMarkdown}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
                   >
                     <span className="text-xs font-medium text-slate-500 w-8">MD</span>
-                    <span className="text-slate-700">Markdown</span>
-                  </button>
-                  <button
-                    onClick={handleExportJSON}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
-                  >
-                    <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                    <span className="text-slate-700">JSON</span>
+                    <span className="text-slate-900">Work Plan</span>
                   </button>
                   <div className="border-t border-slate-200 my-1" />
-                  <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Project</div>
                   <button
                     onClick={handleExportProject}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
                   >
                     <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                    <span className="text-slate-700">Full Project</span>
+                    <span className="text-slate-900">Full Project</span>
                   </button>
                   <button
                     onClick={handleExportMinimalGraph}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
                   >
                     <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                    <span className="text-slate-700">Minimal Graph</span>
+                    <span className="text-slate-900">Minimal Graph</span>
                   </button>
                 </div>
               )}

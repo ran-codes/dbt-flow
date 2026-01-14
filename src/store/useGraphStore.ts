@@ -518,7 +518,11 @@ export const useGraphStore = create<GraphStore>()(
           // Description update task
           if (mod.originalDescription !== mod.newDescription) {
             if (mod.newDescription) {
-              lines.push(`  - [ ] Update description to: "${mod.newDescription.slice(0, 100)}${mod.newDescription.length > 100 ? '...' : ''}"`);
+              if (mod.newDescription.length > 80) {
+                lines.push(`  - [ ] Update description (see JSON below for details)`);
+              } else {
+                lines.push(`  - [ ] Update description to: "${mod.newDescription}"`);
+              }
             } else {
               lines.push(`  - [ ] Remove description`);
             }
@@ -575,6 +579,16 @@ export const useGraphStore = create<GraphStore>()(
         lines.push('');
       }
     }
+
+    // Append JSON work plan at the bottom
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## Work Plan JSON');
+    lines.push('');
+    lines.push('```json');
+    lines.push(JSON.stringify(workPlan, null, 2));
+    lines.push('```');
 
     return lines.join('\n');
   },

@@ -35,30 +35,30 @@ const NODE_HEIGHT = 80; // Increased height to add padding around nodes for edge
  * Color scheme for different node types
  */
 export const nodeColors: Record<string, string> = {
-  model: '#3b82f6',      // blue
-  source: '#10b981',     // green
-  test: '#f59e0b',       // amber
-  seed: '#8b5cf6',       // purple
-  snapshot: '#ec4899',   // pink
-  exposure: '#06b6d4',   // cyan
-  metric: '#f97316',     // orange
-  default: '#6b7280',    // gray
+  model: '#93c5fd',      // blue-300 (pastel)
+  source: '#86efac',     // green-300 (pastel)
+  test: '#fcd34d',       // amber-300 (pastel)
+  seed: '#c4b5fd',       // violet-300 (pastel)
+  snapshot: '#f9a8d4',   // pink-300 (pastel)
+  exposure: '#67e8f9',   // cyan-300 (pastel)
+  metric: '#fdba74',     // orange-300 (pastel)
+  default: '#d1d5db',    // gray-300 (pastel)
 };
 
 /**
  * Color scheme for inferred tags (data layers)
  */
 export const inferredTagColors: Record<string, string> = {
-  source: '#10b981',           // green - source data
-  raw: '#f59e0b',              // amber - raw seed data
-  staging: '#22c55e',          // green-500 - staging transformations
-  base: '#3b82f6',             // blue - base layer with date patterns
-  intermediate: '#8b5cf6',     // purple - intermediate transformations
-  core: '#a855f7',             // purple-500 - core business logic
-  'mart-internal': '#ec4899',  // pink - internal marts
-  'mart-public': '#f43f5e',    // rose-500 - public marts
-  mart: '#ec4899',             // pink - general marts
-  default: '#6b7280',          // gray - fallback
+  source: '#86efac',           // green-300 - source data
+  raw: '#fcd34d',              // amber-300 - raw seed data
+  staging: '#bbf7d0',          // green-200 - staging transformations
+  base: '#93c5fd',             // blue-300 - base layer with date patterns
+  intermediate: '#c4b5fd',     // violet-300 - intermediate transformations
+  core: '#d8b4fe',             // purple-300 - core business logic
+  'mart-internal': '#f9a8d4',  // pink-300 - internal marts
+  'mart-public': '#fecdd3',    // rose-200 - public marts
+  mart: '#fbcfe8',             // pink-200 - general marts
+  default: '#d1d5db',          // gray-300 - fallback
 };
 
 /**
