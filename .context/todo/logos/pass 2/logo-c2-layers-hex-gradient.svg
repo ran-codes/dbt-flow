@@ -1,0 +1,15 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- C2: Stacked layers with hex, more refined -->
+
+  <!-- Filled hex background -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z" fill="#1e293b" />
+
+  <!-- Top layer (source - orange) -->
+  <rect x="20" y="28" width="60" height="11" rx="2" fill="#FF694A" />
+
+  <!-- Middle layer (staging - lighter) -->
+  <rect x="26" y="46" width="48" height="11" rx="2" fill="#64748b" />
+
+  <!-- Bottom layer (mart - lightest) -->
+  <rect x="32" y="64" width="36" height="11" rx="2" fill="#94a3b8" />
+</svg>

@@ -1,0 +1,17 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- C3-V2: Softer rounded layers, lighter hex -->
+
+  <!-- Hex outline (lighter) -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z"
+        stroke="#94a3b8" stroke-width="2" fill="none" />
+
+  <!-- Layers with more rounded corners -->
+  <!-- Top layer (mart - dark) -->
+  <rect x="36" y="29" width="28" height="10" rx="5" fill="#1e293b" />
+
+  <!-- Middle layer (staging - gray) -->
+  <rect x="27" y="45" width="46" height="10" rx="5" fill="#64748b" />
+
+  <!-- Bottom layer (source - orange) -->
+  <rect x="18" y="61" width="64" height="10" rx="5" fill="#FF694A" />
+</svg>

@@ -1,0 +1,12 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Option C: Stacked horizontal bars (data layers) -->
+
+  <!-- Top bar (source - orange) -->
+  <rect x="15" y="20" width="70" height="14" rx="3" fill="#FF694A" />
+
+  <!-- Middle bar (staging - medium) -->
+  <rect x="25" y="43" width="50" height="14" rx="3" fill="#64748b" />
+
+  <!-- Bottom bar (mart - dark) -->
+  <rect x="35" y="66" width="30" height="14" rx="3" fill="#1e293b" />
+</svg>

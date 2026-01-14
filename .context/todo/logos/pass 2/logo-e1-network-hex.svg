@@ -1,0 +1,22 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- E1: Network nodes inside hex outline -->
+
+  <!-- Hex outline -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z"
+        stroke="#e2e8f0" stroke-width="2" fill="none" />
+
+  <!-- Connection lines -->
+  <path d="M22 35 L50 50 M22 65 L50 50 M50 50 L78 35 M50 50 L78 65"
+        stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Left nodes (sources - orange) -->
+  <circle cx="22" cy="35" r="9" fill="#FF694A" />
+  <circle cx="22" cy="65" r="9" fill="#FF694A" />
+
+  <!-- Center node (transform - dark) -->
+  <circle cx="50" cy="50" r="13" fill="#1e293b" />
+
+  <!-- Right nodes (outputs) -->
+  <circle cx="78" cy="35" r="7" fill="#64748b" />
+  <circle cx="78" cy="65" r="7" fill="#64748b" />
+</svg>

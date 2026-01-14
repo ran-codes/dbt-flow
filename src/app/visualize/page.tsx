@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useGraphStore } from '@/store/useGraphStore';
 import ExportModal from '@/components/ExportModal';
 import SaveProjectModal from '@/components/SaveProjectModal';
+import Navbar from '@/components/Navbar';
 import { loadProject, saveProject } from '@/lib/storageService';
 import { buildGraph } from '@/lib/graphBuilder';
 import { type DbtManifest } from '@/lib/manifestParser';
@@ -411,59 +412,110 @@ function VisualizeContent() {
       )}
 
       {/* Header with search */}
-      <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4 z-10">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => !isSaving && router.push('/')}
-            disabled={isSaving}
-            className={`font-medium text-sm ${isSaving ? 'text-slate-400 cursor-not-allowed' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            ← Back
-          </button>
-          <div className="h-6 w-px bg-slate-200"></div>
-          <div>
-            <div className="flex items-center gap-2">
-              {isEditingTitle ? (
-                <input
-                  ref={titleInputRef}
-                  type="text"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  onBlur={handleSaveTitle}
-                  onKeyDown={handleTitleKeyDown}
-                  className="text-lg font-semibold text-slate-900 bg-transparent border-b-2 border-slate-900 outline-none px-0 py-0"
-                  style={{ width: `${Math.max(editedTitle.length, 10)}ch` }}
-                />
-              ) : (
-                <button
-                  onClick={handleStartEditTitle}
-                  className="text-lg font-semibold text-slate-900 hover:bg-slate-100 px-1 -mx-1 rounded transition-colors group flex items-center gap-1"
-                >
-                  {savedProjectName || projectName}
-                  <svg className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
-              )}
+      <Navbar
+        projectTitle={
+          <div className="flex items-center gap-2">
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={handleSaveTitle}
+                onKeyDown={handleTitleKeyDown}
+                className="text-lg font-semibold text-slate-700 bg-transparent border-b-2 border-slate-500 outline-none px-0 py-0"
+                style={{ width: `${Math.max(editedTitle.length, 10)}ch` }}
+              />
+            ) : (
+              <button
+                onClick={handleStartEditTitle}
+                className="text-lg font-semibold text-slate-700 hover:bg-slate-100 px-2 py-1 rounded transition-colors group flex items-center gap-1"
+              >
+                {savedProjectName || projectName}
+                <svg className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            )}
+            {isSaving && (
+              <span className="flex items-center gap-1 text-xs text-slate-500">
+                <span className="animate-spin rounded-full h-3 w-3 border border-slate-300 border-t-slate-600"></span>
+              </span>
+            )}
+            {!isSaving && hasUnsavedChanges && (
+              <span className="w-2 h-2 rounded-full bg-amber-500" title="Unsaved changes" />
+            )}
+            {!isSaving && saveStatus === 'saved' && (
+              <span className="text-xs text-green-600">Saved</span>
+            )}
+          </div>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            {/* Save Button */}
+            <button
+              onClick={handleSaveClick}
+              disabled={isSaving}
+              className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
               {isSaving && (
-                <span className="flex items-center gap-1 text-xs text-slate-500">
-                  <span className="animate-spin rounded-full h-3 w-3 border border-slate-300 border-t-slate-600"></span>
-                  Saving...
-                </span>
+                <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-300 border-t-slate-600"></span>
               )}
-              {!isSaving && hasUnsavedChanges && (
-                <span className="w-2 h-2 rounded-full bg-amber-500" title="Unsaved changes" />
-              )}
-              {!isSaving && saveStatus === 'saved' && (
-                <span className="text-xs text-green-600">✓ Saved</span>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+
+            {/* Export Work Plan Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md transition-colors font-medium text-sm flex items-center gap-2"
+              >
+                Export
+                <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
+                  <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Work Plan</div>
+                  <button
+                    onClick={handleExportMarkdown}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
+                  >
+                    <span className="text-xs font-medium text-slate-500 w-8">MD</span>
+                    <span className="text-slate-700">Markdown</span>
+                  </button>
+                  <button
+                    onClick={handleExportJSON}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
+                  >
+                    <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
+                    <span className="text-slate-700">JSON</span>
+                  </button>
+                  <div className="border-t border-slate-200 my-1" />
+                  <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Project</div>
+                  <button
+                    onClick={handleExportProject}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
+                  >
+                    <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
+                    <span className="text-slate-700">Full Project</span>
+                  </button>
+                  <button
+                    onClick={handleExportMinimalGraph}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
+                  >
+                    <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
+                    <span className="text-slate-700">Minimal Graph</span>
+                  </button>
+                </div>
               )}
             </div>
-            <p className="text-xs text-slate-500">
-              {savedProjectName ? projectName : 'dbt Project Lineage'}
-            </p>
           </div>
-        </div>
-
+        }
+      >
+        {/* Search input */}
         <div className="flex-1 max-w-md">
           <input
             type="text"
@@ -473,70 +525,7 @@ function VisualizeContent() {
             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
           />
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* Save Button */}
-          <button
-            onClick={handleSaveClick}
-            disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          >
-            {isSaving && (
-              <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-300 border-t-slate-600"></span>
-            )}
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
-
-          {/* Export Work Plan Dropdown */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md transition-colors font-medium text-sm flex items-center gap-2"
-            >
-              Export
-              <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
-                <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Work Plan</div>
-                <button
-                  onClick={handleExportMarkdown}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
-                >
-                  <span className="text-xs font-medium text-slate-500 w-8">MD</span>
-                  <span className="text-slate-700">Markdown</span>
-                </button>
-                <button
-                  onClick={handleExportJSON}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
-                >
-                  <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                  <span className="text-slate-700">JSON</span>
-                </button>
-                <div className="border-t border-slate-200 my-1" />
-                <div className="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase">Project</div>
-                <button
-                  onClick={handleExportProject}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
-                >
-                  <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                  <span className="text-slate-700">Full Project</span>
-                </button>
-                <button
-                  onClick={handleExportMinimalGraph}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-3"
-                >
-                  <span className="text-xs font-medium text-slate-500 w-8">JSON</span>
-                  <span className="text-slate-700">Minimal Graph</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      </Navbar>
 
       {/* Graph area - calculate height to account for header and filter bar */}
       <div className="flex-1 relative overflow-hidden" style={{ height: 'calc(100vh - 4.5rem - 3.5rem)' }}>

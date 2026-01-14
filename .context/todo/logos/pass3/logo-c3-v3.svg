@@ -1,0 +1,16 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- C3-V3: Dark filled hex background -->
+
+  <!-- Filled hex background -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z" fill="#1e293b" />
+
+  <!-- Layers (lighter colors on dark bg) -->
+  <!-- Top layer (mart - light gray) -->
+  <rect x="36" y="29" width="28" height="10" rx="2.5" fill="#94a3b8" />
+
+  <!-- Middle layer (staging - medium) -->
+  <rect x="27" y="45" width="46" height="10" rx="2.5" fill="#cbd5e1" />
+
+  <!-- Bottom layer (source - orange) -->
+  <rect x="18" y="61" width="64" height="10" rx="2.5" fill="#FF694A" />
+</svg>

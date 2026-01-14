@@ -1,0 +1,18 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Option E: Network of connected nodes -->
+
+  <!-- Connection lines first (behind nodes) -->
+  <path d="M25 30 L50 50 M25 70 L50 50 M50 50 L80 35 M50 50 L80 65"
+        stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Left nodes (sources - orange) -->
+  <circle cx="25" cy="30" r="10" fill="#FF694A" />
+  <circle cx="25" cy="70" r="10" fill="#FF694A" />
+
+  <!-- Center node (transform - dark) -->
+  <circle cx="50" cy="50" r="14" fill="#1e293b" />
+
+  <!-- Right nodes (outputs - gray) -->
+  <circle cx="80" cy="35" r="8" fill="#64748b" />
+  <circle cx="80" cy="65" r="8" fill="#64748b" />
+</svg>

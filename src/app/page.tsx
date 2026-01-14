@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 import { fetchManifest, parseManifestFile, type DbtManifest } from '@/lib/manifestParser';
 import { buildGraph } from '@/lib/graphBuilder';
 import { useGraphStore } from '@/store/useGraphStore';
@@ -20,6 +21,10 @@ export default function Home() {
   const [manifestDropdownOpen, setManifestDropdownOpen] = useState(false);
   const [sampleDropdownOpen, setSampleDropdownOpen] = useState(false);
   const [activeManifestOption, setActiveManifestOption] = useState<'url' | 'paste' | null>(null);
+  const [projectSearch, setProjectSearch] = useState('');
+  const [sortOrder, setSortOrder] = useState<'recent' | 'name-asc' | 'name-desc'>('recent');
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const manifestUploadRef = useRef<HTMLInputElement>(null);
@@ -40,10 +45,25 @@ export default function Home() {
       if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target as Node)) {
         setSampleDropdownOpen(false);
       }
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setSortDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Filter and sort projects
+  const filteredProjects = savedProjects
+    .filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'name-asc': return a.name.localeCompare(b.name);
+        case 'name-desc': return b.name.localeCompare(a.name);
+        case 'recent':
+        default: return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+    });
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,7 +192,7 @@ export default function Home() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
   const handleBackupDatabase = async () => {
@@ -301,17 +321,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <h1 className="text-xl font-semibold text-slate-900">dbt-planner</h1>
-          <p className="text-sm text-slate-500">Interactive dbt lineage visualization</p>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white flex flex-col">
+      <Navbar />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-8">
         {/* Error Display */}
         {error && (
           <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-md">
@@ -334,79 +348,6 @@ export default function Home() {
           onChange={handleRestoreDatabase}
           className="hidden"
         />
-
-        {/* Saved Projects Section */}
-        <section className="mb-10">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-              Saved Projects
-            </h2>
-            <button
-              onClick={() => importInputRef.current?.click()}
-              disabled={isLoading}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
-            >
-              Import project
-            </button>
-          </div>
-          {savedProjects.length > 0 ? (
-            <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
-              {savedProjects.map((project) => (
-                <div
-                  key={project.id}
-                  className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900 truncate">{project.name}</p>
-                    <p className="text-sm text-slate-500">
-                      {project.sourceProjectName} · {project.nodeCount} nodes · {project.plannedNodeCount} planned · Updated {formatDate(project.updatedAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <button
-                      onClick={() => handleOpenProject(project.id)}
-                      className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
-                    >
-                      Open
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProject(project.id)}
-                      disabled={deletingId === project.id}
-                      className="px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                    >
-                      {deletingId === project.id ? '...' : 'Delete'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="border border-slate-200 border-dashed rounded-lg px-4 py-6 text-center">
-              <p className="text-sm text-slate-500">No saved projects yet</p>
-              <p className="text-xs text-slate-400 mt-1">Projects you save will appear here</p>
-            </div>
-          )}
-          {/* Database backup/restore */}
-          <div className="mt-3 flex items-center justify-end gap-3 text-xs">
-            <button
-              onClick={handleBackupDatabase}
-              disabled={isLoading || savedProjects.length === 0}
-              className="text-slate-400 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Backup DB
-            </button>
-            <span className="text-slate-300">·</span>
-            <button
-              onClick={() => restoreInputRef.current?.click()}
-              disabled={isLoading}
-              className="text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
-            >
-              Restore DB
-            </button>
-          </div>
-        </section>
-
-        {/* Hidden manifest upload input */}
         <input
           ref={manifestUploadRef}
           type="file"
@@ -415,15 +356,15 @@ export default function Home() {
           className="hidden"
         />
 
-        {/* Start New Section - Consolidated */}
+        {/* Get Started Section */}
         <section className="mb-10">
-          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
-            Start New
+          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-3">
+            Get Started
           </h2>
           <div className="border border-slate-200 rounded-lg p-4">
             {/* Three buttons in a row */}
             <div className="flex gap-3">
-              {/* From Manifest Dropdown */}
+              {/* Import dbt Project Dropdown */}
               <div className="relative flex-1" ref={manifestDropdownRef}>
                 <button
                   onClick={() => {
@@ -433,7 +374,7 @@ export default function Home() {
                   disabled={isLoading}
                   className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  From Manifest
+                  Import dbt Project
                   <svg className={`w-4 h-4 transition-transform ${manifestDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -471,7 +412,16 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Sample Project Dropdown */}
+              {/* Start Blank Project Button */}
+              <button
+                onClick={() => router.push('/visualize?blank=true')}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+              >
+                Start Blank Project
+              </button>
+
+              {/* Open Sample Project Dropdown */}
               <div className="relative flex-1" ref={sampleDropdownRef}>
                 <button
                   onClick={() => {
@@ -481,7 +431,7 @@ export default function Home() {
                   disabled={isLoading}
                   className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  Sample Project
+                  Open Sample Project
                   <svg className={`w-4 h-4 transition-transform ${sampleDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -519,15 +469,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-
-              {/* Blank Project Button */}
-              <button
-                onClick={() => router.push('/visualize?blank=true')}
-                disabled={isLoading}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
-              >
-                Blank Project
-              </button>
             </div>
 
             {/* Expanded options below buttons */}
@@ -603,6 +544,128 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Saved Projects Section */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-3 gap-4">
+            <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide whitespace-nowrap">
+              Saved Projects {savedProjects.length > 0 && `(${savedProjects.length})`}
+            </h2>
+            <div className="flex items-center gap-2 flex-1 justify-end">
+              {/* Search */}
+              <div className="relative">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent w-40"
+                />
+              </div>
+              {/* Sort dropdown */}
+              <div className="relative" ref={sortDropdownRef}>
+                <button
+                  onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-md hover:bg-slate-50 transition-colors flex items-center gap-1"
+                >
+                  {sortOrder === 'recent' ? 'Recent' : sortOrder === 'name-asc' ? 'A-Z' : 'Z-A'}
+                  <svg className={`w-4 h-4 transition-transform ${sortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {sortDropdownOpen && (
+                  <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
+                    <button
+                      onClick={() => { setSortOrder('recent'); setSortDropdownOpen(false); }}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'recent' ? 'text-slate-900 font-medium' : 'text-slate-600'}`}
+                    >
+                      Recent first
+                    </button>
+                    <button
+                      onClick={() => { setSortOrder('name-asc'); setSortDropdownOpen(false); }}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'name-asc' ? 'text-slate-900 font-medium' : 'text-slate-600'}`}
+                    >
+                      Name A-Z
+                    </button>
+                    <button
+                      onClick={() => { setSortOrder('name-desc'); setSortDropdownOpen(false); }}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${sortOrder === 'name-desc' ? 'text-slate-900 font-medium' : 'text-slate-600'}`}
+                    >
+                      Name Z-A
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          {filteredProjects.length > 0 ? (
+            <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
+              {filteredProjects.map((project) => (
+                <div
+                  key={project.id}
+                  className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-900 truncate">{project.name}</p>
+                    <p className="text-sm text-slate-500">
+                      {project.sourceProjectName} · {project.nodeCount} nodes · {project.plannedNodeCount} planned · Updated {formatDate(project.updatedAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleOpenProject(project.id)}
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                    >
+                      Open
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(project.id)}
+                      disabled={deletingId === project.id}
+                      className="px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                    >
+                      {deletingId === project.id ? '...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : savedProjects.length > 0 ? (
+            <div className="border border-slate-200 border-dashed rounded-lg px-4 py-6 text-center">
+              <p className="text-sm text-slate-500">No projects match your search</p>
+            </div>
+          ) : (
+            <div className="border border-slate-200 border-dashed rounded-lg px-4 py-6 text-center">
+              <p className="text-sm text-slate-500">No saved projects yet</p>
+              <p className="text-xs text-slate-400 mt-1">Projects you save will appear here</p>
+            </div>
+          )}
+          {/* Database backup/restore */}
+          <div className="mt-3 flex items-center justify-end gap-4 text-sm">
+            <button
+              onClick={handleBackupDatabase}
+              disabled={isLoading || savedProjects.length === 0}
+              className="text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Backup DB
+            </button>
+            <button
+              onClick={() => restoreInputRef.current?.click()}
+              disabled={isLoading}
+              className="text-slate-500 hover:text-slate-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Restore DB
+            </button>
+          </div>
+        </section>
+
         {/* Loading Spinner */}
         {isLoading && (
           <div className="fixed inset-0 bg-white/80 flex items-center justify-center">
@@ -612,7 +675,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 mt-16">
+      <footer className="border-t border-slate-200">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <p className="text-sm text-slate-500 text-center">
             No data leaves your browser · Open source

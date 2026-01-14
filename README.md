@@ -15,7 +15,7 @@ A browser-based tool for visualizing dbt project lineage and planning model chan
 
 ### Try it Online
 
-Visit the hosted version: **[dbt-planner](https://yourusername.github.io/dbt-planner)**
+Visit the hosted version: **[dbt-planner](https://ranli.dev/dbt-planner/)**
 
 ### Run Locally
 

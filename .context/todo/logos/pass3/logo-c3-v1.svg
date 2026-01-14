@@ -1,0 +1,17 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- C3-V1: Clean, well-centered layers with hex outline -->
+
+  <!-- Hex outline -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z"
+        stroke="#1e293b" stroke-width="2.5" fill="none" />
+
+  <!-- Layers vertically centered -->
+  <!-- Top layer (mart - dark, narrowest) -->
+  <rect x="35" y="25" width="30" height="11" rx="2.5" fill="#1e293b" />
+
+  <!-- Middle layer (staging - gray) -->
+  <rect x="26" y="41.5" width="48" height="11" rx="2.5" fill="#64748b" />
+
+  <!-- Bottom layer (source - orange, widest) -->
+  <rect x="17" y="58" width="66" height="11" rx="2.5" fill="#FF694A" />
+</svg>

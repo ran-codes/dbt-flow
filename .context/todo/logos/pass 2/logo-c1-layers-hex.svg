@@ -1,0 +1,16 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- C1: Stacked layers inside hex -->
+
+  <!-- Hex outline -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z"
+        stroke="#1e293b" stroke-width="3" fill="none" />
+
+  <!-- Top layer (source - orange) -->
+  <rect x="18" y="25" width="64" height="12" rx="3" fill="#FF694A" />
+
+  <!-- Middle layer (staging) -->
+  <rect x="26" y="45" width="48" height="12" rx="3" fill="#64748b" />
+
+  <!-- Bottom layer (mart - dark) -->
+  <rect x="34" y="65" width="32" height="12" rx="3" fill="#1e293b" />
+</svg>

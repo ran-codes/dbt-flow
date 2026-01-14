@@ -1,0 +1,18 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- A2: Bracket + Node with hex background -->
+
+  <!-- Hex background -->
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z" fill="#f8fafc" />
+  <path d="M50 5 L92 27 L92 73 L50 95 L8 73 L8 27 Z" stroke="#1e293b" stroke-width="3" fill="none" />
+
+  <!-- dbt-style bracket (orange) -->
+  <path d="M28 32 L20 32 Q16 32 16 38 L16 62 Q16 68 20 68 L28 68"
+        stroke="#FF694A" stroke-width="7" stroke-linecap="round" fill="none" />
+
+  <!-- Closing bracket (dark) -->
+  <path d="M72 32 L80 32 Q84 32 84 38 L84 62 Q84 68 80 68 L72 68"
+        stroke="#1e293b" stroke-width="7" stroke-linecap="round" fill="none" />
+
+  <!-- Center dot -->
+  <circle cx="50" cy="50" r="10" fill="#FF694A" />
+</svg>

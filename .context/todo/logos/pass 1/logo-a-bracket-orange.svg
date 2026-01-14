@@ -1,0 +1,16 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Option A: dbt-style angle bracket in orange with planning dot -->
+
+  <!-- Orange angle bracket (dbt homage) -->
+  <path
+    d="M65 20L25 50L65 80"
+    stroke="#FF694A"
+    stroke-width="12"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+
+  <!-- Planning node -->
+  <circle cx="78" cy="50" r="10" fill="#1e293b" />
+</svg>
